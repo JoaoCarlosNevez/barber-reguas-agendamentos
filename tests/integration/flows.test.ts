@@ -574,6 +574,29 @@ describe('lembrete de retorno desligado', () => {
   })
 })
 
+describe('barbeiro fecha a agenda do dia', () => {
+  it('bloqueia o próprio dia (some do site); não fecha o de outro; reabre', async () => {
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    await c.auth.signInWithPassword({ email: 'rafael@barbearia.dev', password: 'Senha@123' })
+    const date = futureDate(9)
+    expect((await callFn('get-availability', { barber_id: RAFAEL, service_ids: [CORTE], date })).body.slots.length).toBeGreaterThan(0)
+
+    const day = { starts_at: zonedToUtc(date, 0, SP).toISOString(), ends_at: zonedToUtc(addDays(date, 1), 0, SP).toISOString() }
+    const outro = await c.from('time_off').insert({ ...day, barber_id: 'ba000000-0000-4000-8000-000000000002' })
+    expect(outro.error).not.toBeNull()
+
+    const { data: block, error } = await c.from('time_off').insert({ ...day, barber_id: RAFAEL }).select('id').single()
+    expect(error).toBeNull()
+    try {
+      const closed = await callFn('get-availability', { barber_id: RAFAEL, service_ids: [CORTE], date })
+      expect(closed.body.slots).toEqual([])
+    } finally {
+      const del = await c.from('time_off').delete().eq('id', block?.id ?? '').select('id')
+      expect(del.data?.length).toBe(1)
+    }
+  })
+})
+
 describe('super admin', () => {
   it('só o super admin cadastra dono; dono nasce admin e também barbeiro', async () => {
     const adm = await tokenFor('admin@barbearia.dev')

@@ -8,7 +8,6 @@ import { APP_TIMEZONE } from '@/lib/env'
 import {
   calendarDate,
   centsToInput,
-  formatLongDate,
   formatPrice,
   formatTime,
   parseBrlToCents,
@@ -19,22 +18,11 @@ import {
 import { addDays, dateInTz, formatBrPhone, zonedToUtc } from '@/lib/shared'
 import { type Enums, supabase } from '@/lib/supabase'
 import { useNow } from '@/hooks/useNow'
+import { cancelWhatsappUrl } from '@/lib/whatsapp'
+import { CloseDay } from './CloseDay'
 
 type Status = Enums<'appointment_status'>
 type PaymentMethod = Enums<'payment_method'>
-
-/** Mensagem pronta para avisar o cliente do cancelamento no WhatsApp. */
-function cancelWhatsappUrl(a: {
-  starts_at: string
-  customer: { name: string; phone: string } | null
-  appointment_services: { service_name: string }[]
-}): string | null {
-  if (!a.customer?.phone) return null
-  const first = a.customer.name.trim().split(/\s+/)[0] ?? ''
-  const services = a.appointment_services.map((s) => s.service_name).join(' + ')
-  const text = `Oi, ${first}! Aqui é do Studio Réguas. Infelizmente precisamos cancelar seu horário de ${formatLongDate(a.starts_at)} às ${formatTime(a.starts_at)} (${services}). Desculpe o transtorno! Quer remarcar? É só escolher outro horário: ${window.location.origin}/`
-  return `https://wa.me/${a.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`
-}
 
 const longDay = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
 
@@ -180,6 +168,15 @@ export function DayAgenda({
   return (
     <div className="space-y-4">
       <DateNav date={date} today={today} onChange={setDate} />
+
+      {barberId && date >= today && agenda.data ? (
+        <CloseDay
+          key={`${barberId}-${date}`}
+          barberId={barberId}
+          date={date}
+          scheduled={list.filter((a) => a.status === 'scheduled')}
+        />
+      ) : null}
 
       {agenda.data ? (
         <div className="grid grid-cols-2 gap-2 text-center">
