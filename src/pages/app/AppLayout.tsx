@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import { InstallBanner } from '@/components/InstallBanner'
 import { isManager, useAuth } from '@/lib/auth'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
@@ -20,6 +21,7 @@ export function AppLayout() {
         <span className="text-xs font-semibold tracking-wide text-muted uppercase">Equipe</span>
       </header>
       <main className="flex-1 pb-28">
+        <InstallBanner />
         <Outlet />
       </main>
       {session ? (

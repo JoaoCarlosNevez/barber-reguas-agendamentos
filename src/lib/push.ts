@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { callFunction } from './api'
 import { env } from './env'
 import { supabase } from './supabase'
+import { isIos, isStandalone } from './install'
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -12,14 +13,6 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 export type PushState = 'unsupported' | 'needs-install' | 'denied' | 'off' | 'on' | 'loading'
-
-function isIos(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
-}
-
-function isStandalone(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches
-}
 
 async function detectPushState(): Promise<PushState> {
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window

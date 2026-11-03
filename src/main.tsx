@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { AuthProvider } from '@/lib/AuthProvider'
+import { initInstallCapture } from '@/lib/install'
 import { syncPwaScope } from '@/lib/pwaScope'
 import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
@@ -19,6 +20,7 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
   })
 }
 
+initInstallCapture()
 syncPwaScope(router.state.location.pathname)
 router.subscribe((state) => syncPwaScope(state.location.pathname))
 
