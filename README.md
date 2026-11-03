@@ -141,7 +141,7 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | `push` | barbeiro/admin/super_admin | `subscribe` (salva a assinatura Web Push) e `test` |
 | `redeem-loyalty` | barbeiro (clientes que atendeu) / admin / super_admin | consome os selos da regra ativa |
 | `admin-create-barber` | admin / super_admin | cria login + barbeiro + expediente padrão; `role: "admin"` (dono) só o super_admin |
-| `completion-reminders` | pg_cron (a cada 5 min), sem auth | push ao barbeiro quando um atendimento termina e segue "agendado": abre `/app/?concluir=<id>&dia=<data>`; idempotente (`completion_reminded_at`) |
+| `completion-reminders` | pg_cron (a cada 5 min), sem auth | push ao barbeiro quando um atendimento termina e segue "agendado": abre `/app/?concluir=<id>&dia=<data>`; idempotente (`completion_reminded_at`). Também envia o lembrete de retorno: 20 dias depois de um corte concluído, sem outro horário marcado, push ao barbeiro com botão de WhatsApp ("Vamos agendar seu corte?"), só das 9h às 20h; aparece em "Chamar de volta" no app até mandar/dispensar (`return_reminded_at`, `return_pending`) |
 | `customer-login` | pública | login do cliente sem senha: celular identifica a conta, o primeiro nome precisa conferir; cria a conta se não existir (adota o histórico de visitante desse celular) e devolve um `token_hash` que o front troca por sessão com `verifyOtp` |
 | `admin-set-password` | admin / super_admin | define uma nova senha (não há "esqueci a senha" por e-mail); senha de dono/super admin só o super_admin troca |
 | `super-set-role` | super_admin | alterna uma conta da equipe entre barbeiro e dono |

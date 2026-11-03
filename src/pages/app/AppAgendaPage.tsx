@@ -9,6 +9,7 @@ import { errorMessage } from '@/lib/api'
 import { isManager, useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useAllBarbers } from '@/pages/admin/queries'
+import { ReturnReminders } from './ReturnReminders'
 import { StaffBookingForm } from './StaffBookingForm'
 
 export function AppAgendaPage() {
@@ -19,6 +20,8 @@ export function AppAgendaPage() {
   const focusId = params.get('concluir')
   const rawDay = params.get('dia')
   const focusDay = rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) ? rawDay : null
+  // vindo do push "chamar de volta"
+  const returnId = params.get('retorno')
   const [booking, setBooking] = useState(false)
   const allBarbers = useAllBarbers()
 
@@ -62,6 +65,9 @@ export function AppAgendaPage() {
         <Button className="w-full" size="lg" onClick={() => setBooking(true)}>
           + Novo agendamento
         </Button>
+      ) : null}
+      {barber.data || isManager(role) ? (
+        <ReturnReminders barberId={isManager(role) ? null : (barber.data?.id ?? null)} focusId={returnId} />
       ) : null}
       {isManager(role) ? (
         <ManagerAgenda myBarberId={barber.data?.id ?? null} focusId={focusId} focusDay={focusDay} />

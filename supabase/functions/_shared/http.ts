@@ -44,6 +44,12 @@ function allowedOrigins(): string[] {
     .filter(Boolean)
 }
 
+/** Endereço público do site (primeiro https de APP_ORIGINS), para links em mensagens. */
+export function siteOrigin(): string {
+  const all = allowedOrigins()
+  return all.find((o) => o.startsWith('https://')) ?? all[0] ?? DEFAULT_ORIGINS[0] ?? ''
+}
+
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin')
   const headers: Record<string, string> = {

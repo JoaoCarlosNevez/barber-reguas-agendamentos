@@ -3,9 +3,12 @@
 // barbeiro por push para marcar como concluído e informar o pagamento.
 // Cada atendimento é lembrado uma única vez (completion_reminded_at), então a
 // function é idempotente e não expõe dados: não exige autenticação.
+// Também dispara o lembrete de retorno (20 dias depois do corte), ver
+// _shared/returnReminders.ts.
 import { json, serve } from '../_shared/http.ts'
 import { log } from '../_shared/log.ts'
 import { sendPushToUser } from '../_shared/push.ts'
+import { sendReturnReminders } from '../_shared/returnReminders.ts'
 import { adminClient } from '../_shared/supabase.ts'
 import { dateInTz, timeInTz } from '../_shared/time.ts'
 
@@ -58,5 +61,6 @@ serve(FN, async (req) => {
   }
 
   if (reminded) log.info(FN, 'reminders_sent', { count: reminded })
-  return json(req, { reminded })
+  const ret = await sendReturnReminders(db, FN, now, tz)
+  return json(req, { reminded, return_sent: ret.sent, return_window: ret.inWindow })
 })

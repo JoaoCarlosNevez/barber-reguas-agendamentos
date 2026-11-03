@@ -494,6 +494,61 @@ describe('conclusão com pagamento + lembrete', () => {
   })
 })
 
+describe('lembrete de retorno (20 dias depois do corte)', () => {
+  const bookPast = async (daysAgo: number, phone: string, name: string) => {
+    const start = new Date(Math.floor((Date.now() - daysAgo * 86_400_000) / 900_000) * 900_000)
+    const hash = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('')
+    const { data, error } = await admin.rpc('book_appointment', {
+      p_barber_id: RAFAEL,
+      p_starts_at: start.toISOString(),
+      p_service_ids: [CORTE],
+      p_cancel_token_hash: hash,
+      p_customer_name: name,
+      p_customer_phone: phone,
+    })
+    expect(error).toBeNull()
+    const id = data?.[0]?.appointment_id ?? ''
+    const done = await admin.from('appointments').update({ status: 'completed', payment_method: 'pix' }).eq('id', id)
+    expect(done.error).toBeNull()
+    return id
+  }
+
+  it('avisa uma vez quem não voltou; pula quem já voltou; barbeiro dispensa', async (ctx) => {
+    const sumido = await bookPast(21, `${PHONE_PREFIX}00501`, 'Sumido Teste')
+    // este voltou depois: o corte antigo não gera lembrete
+    const antigo = await bookPast(23, `${PHONE_PREFIX}00502`, 'Voltou Teste')
+    await bookPast(2, `${PHONE_PREFIX}00502`, 'Voltou Teste')
+    const recente = await bookPast(10, `${PHONE_PREFIX}00503`, 'Recente Teste')
+
+    const r = await callFn('completion-reminders', {})
+    expect(r.status).toBe(200)
+    if (!r.body.return_window) ctx.skip() // fora do horário comercial: nada é enviado
+
+    const rows = async (ids: string[]) =>
+      (await admin.from('appointments').select('id, return_pending, return_reminded_at').in('id', ids)).data ?? []
+    const byId = new Map((await rows([sumido, antigo, recente])).map((x) => [x.id, x]))
+    expect(byId.get(sumido)).toMatchObject({ return_pending: true })
+    expect(byId.get(sumido)?.return_reminded_at).not.toBeNull()
+    expect(byId.get(antigo)).toMatchObject({ return_pending: false })
+    expect(byId.get(antigo)?.return_reminded_at).not.toBeNull()
+    expect(byId.get(recente)).toMatchObject({ return_pending: false, return_reminded_at: null })
+
+    // não repete
+    const first = byId.get(sumido)?.return_reminded_at
+    await callFn('completion-reminders', {})
+    expect((await rows([sumido]))[0]?.return_reminded_at).toBe(first)
+
+    // barbeiro vê em "Chamar de volta" e dispensa
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    await c.auth.signInWithPassword({ email: 'rafael@barbearia.dev', password: 'Senha@123' })
+    const { data: pending } = await c.from('appointments').select('id').eq('return_pending', true)
+    expect(pending?.map((p) => p.id)).toContain(sumido)
+    const off = await c.from('appointments').update({ return_pending: false }).eq('id', sumido)
+    expect(off.error).toBeNull()
+    expect((await rows([sumido]))[0]?.return_pending).toBe(false)
+  })
+})
+
 describe('super admin', () => {
   it('só o super admin cadastra dono; dono nasce admin e também barbeiro', async () => {
     const adm = await tokenFor('admin@barbearia.dev')

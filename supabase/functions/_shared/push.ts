@@ -9,6 +9,8 @@ export interface PushPayload {
   /** caminho do app aberto ao tocar na notificação */
   url: string
   tag?: string
+  /** botões da notificação (Android/desktop; no iPhone só o toque principal) */
+  actions?: { action: string; title: string; url: string }[]
 }
 
 let configured: boolean | null = null
