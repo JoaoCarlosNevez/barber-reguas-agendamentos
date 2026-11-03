@@ -2,10 +2,12 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 import { BarbersAdmin } from './BarbersAdmin'
 import { LoyaltyAdmin } from './LoyaltyAdmin'
+import { RevenueDashboard } from './RevenueDashboard'
 import { ServicesAdmin } from './ServicesAdmin'
 import { SettingsAdmin } from './SettingsAdmin'
 
 const MANAGE_TABS = {
+  faturamento: { label: 'Faturamento', render: () => <RevenueDashboard /> },
   barbeiros: { label: 'Barbeiros', render: () => <BarbersAdmin /> },
   servicos: { label: 'Serviços', render: () => <ServicesAdmin /> },
   fidelidade: { label: 'Fidelidade', render: () => <LoyaltyAdmin /> },
@@ -19,7 +21,7 @@ const TAB_IDS = Object.keys(MANAGE_TABS) as ManageTabId[]
 export function ManageTabs() {
   const [params, setParams] = useSearchParams()
   const raw = params.get('aba')
-  const tab: ManageTabId = TAB_IDS.includes(raw as ManageTabId) ? (raw as ManageTabId) : 'barbeiros'
+  const tab: ManageTabId = TAB_IDS.includes(raw as ManageTabId) ? (raw as ManageTabId) : 'faturamento'
 
   return (
     <div className="space-y-6">

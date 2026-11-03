@@ -63,6 +63,8 @@ function translateSupabaseError(msg: string): string {
     [/rate limit/i, 'Muitas tentativas. Aguarde um pouco.'],
     [/appointment_not_started/i, 'Só dá para marcar como atendido depois do horário de início.'],
     [/invalid_status_transition/i, 'Esse agendamento já foi finalizado.'],
+    [/payment_required/i, 'Informe a forma de pagamento para concluir.'],
+    [/payment_locked/i, 'Só o dono pode corrigir o pagamento de um atendimento concluído.'],
     [/appointments_no_overlap/i, 'Conflito com outro agendamento.'],
     [/failed to fetch|network/i, 'Sem conexão com o servidor.'],
     [/duplicate key/i, 'Esse registro já existe.'],

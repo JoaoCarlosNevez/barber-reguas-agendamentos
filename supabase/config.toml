@@ -447,3 +447,6 @@ verify_jwt = false
 
 [functions.customer-login]
 verify_jwt = false
+
+[functions.completion-reminders]
+verify_jwt = false

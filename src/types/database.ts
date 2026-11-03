@@ -47,14 +47,14 @@ isOneToOne: false
                   ]
                 },"appointments": {
                   Row: {
-                    "barber_id": string,"cancel_token_hash": string,"cancelled_at": string | null,"cancelled_by": Database["public"]['Enums']["cancel_actor"] | null,"created_at": string,"customer_id": string,"ends_at": string,"id": string,"starts_at": string,"status": Database["public"]['Enums']["appointment_status"],"updated_at": string
+                    "barber_id": string,"cancel_token_hash": string,"cancelled_at": string | null,"cancelled_by": Database["public"]['Enums']["cancel_actor"] | null,"completed_at": string | null,"completion_reminded_at": string | null,"created_at": string,"customer_id": string,"ends_at": string,"id": string,"paid_cents": number | null,"payment_method": Database["public"]['Enums']["payment_method"] | null,"starts_at": string,"status": Database["public"]['Enums']["appointment_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "barber_id": string,"cancel_token_hash": string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"created_at"?: string,"customer_id": string,"ends_at": string,"id"?: string,"starts_at": string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
+                    "barber_id": string,"cancel_token_hash": string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id": string,"ends_at": string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"starts_at": string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
                   }
                   Update: {
-                    "barber_id"?: string,"cancel_token_hash"?: string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"created_at"?: string,"customer_id"?: string,"ends_at"?: string,"id"?: string,"starts_at"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
+                    "barber_id"?: string,"cancel_token_hash"?: string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id"?: string,"ends_at"?: string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -316,7 +316,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","user_role": "customer"|"barber"|"admin"|"super_admin"
+            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","payment_method": "pix"|"cash"|"debit"|"credit","user_role": "customer"|"barber"|"admin"|"super_admin"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -432,7 +432,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"user_role": ["customer", "barber", "admin", "super_admin"]
+            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"payment_method": ["pix", "cash", "debit", "credit"],"user_role": ["customer", "barber", "admin", "super_admin"]
           }
         }
 } as const

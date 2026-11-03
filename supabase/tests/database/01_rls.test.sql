@@ -7,7 +7,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(44);
+select plan(47);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (como postgres)
@@ -225,10 +225,23 @@ select throws_ok(
   $$update public.appointments set status = 'completed' where id = 'a1000000-0000-4000-8000-000000000004'$$,
   'P0001', 'appointment_not_started', 'não conclui agendamento futuro'
 );
+select throws_ok(
+  $$update public.appointments set status = 'completed' where id = 'a1000000-0000-4000-8000-000000000001'$$,
+  'P0001', 'payment_required', 'concluir exige a forma de pagamento'
+);
 select lives_ok(
-  $$update public.appointments set status = 'completed'
+  $$update public.appointments set status = 'completed', payment_method = 'pix'
     where id in ('a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000003')$$,
   'barbeiro conclui os próprios agendamentos passados'
+);
+select ok(
+  (select paid_cents is not null and completed_at is not null
+     from public.appointments where id = 'a1000000-0000-4000-8000-000000000001'),
+  'valor pago assume o total dos serviços quando não informado'
+);
+select throws_ok(
+  $$update public.appointments set paid_cents = 1 where id = 'a1000000-0000-4000-8000-000000000001'$$,
+  'P0001', 'payment_locked', 'barbeiro não altera o pagamento depois de concluído'
 );
 select throws_ok(
   $$update public.appointments set status = 'scheduled' where id = 'a1000000-0000-4000-8000-000000000001'$$,

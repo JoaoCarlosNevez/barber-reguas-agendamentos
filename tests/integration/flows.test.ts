@@ -345,6 +345,42 @@ describe('customer-login (celular + nome, sem senha)', () => {
   })
 })
 
+describe('conclusão com pagamento + lembrete', () => {
+  it('lembra o barbeiro uma vez; barbeiro conclui informando o pagamento', async () => {
+    // atendimento que terminou há ~1h (Corte 30 min), em horário redondo
+    const start = new Date(Math.floor((Date.now() - 90 * 60_000) / 900_000) * 900_000)
+    const hash = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('')
+    const { data, error } = await admin.rpc('book_appointment', {
+      p_barber_id: RAFAEL,
+      p_starts_at: start.toISOString(),
+      p_service_ids: [CORTE],
+      p_cancel_token_hash: hash,
+      p_customer_name: 'Lembrete Teste',
+      p_customer_phone: `${PHONE_PREFIX}00201`,
+    })
+    expect(error).toBeNull()
+    const id = data?.[0]?.appointment_id ?? ''
+
+    const first = await callFn('completion-reminders', {})
+    expect(first.status).toBe(200)
+    const { data: row } = await admin.from('appointments').select('completion_reminded_at').eq('id', id).single()
+    expect(row?.completion_reminded_at).not.toBeNull()
+    await callFn('completion-reminders', {})
+    const { data: again } = await admin.from('appointments').select('completion_reminded_at').eq('id', id).single()
+    expect(again?.completion_reminded_at).toBe(row?.completion_reminded_at)
+
+    // barbeiro conclui pelo app: sem pagamento é recusado; com pagamento vale o total
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    await c.auth.signInWithPassword({ email: 'rafael@barbearia.dev', password: 'Senha@123' })
+    const noPay = await c.from('appointments').update({ status: 'completed' }).eq('id', id)
+    expect(noPay.error?.message).toMatch(/payment_required/)
+    const ok = await c.from('appointments').update({ status: 'completed', payment_method: 'pix' }).eq('id', id)
+    expect(ok.error).toBeNull()
+    const { data: done } = await admin.from('appointments').select('status, paid_cents, payment_method').eq('id', id).single()
+    expect(done).toMatchObject({ status: 'completed', paid_cents: 4500, payment_method: 'pix' })
+  })
+})
+
 describe('super admin', () => {
   it('só o super admin cadastra dono; dono nasce admin e também barbeiro', async () => {
     const adm = await tokenFor('admin@barbearia.dev')

@@ -141,6 +141,7 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | `push` | barbeiro/admin/super_admin | `subscribe` (salva a assinatura Web Push) e `test` |
 | `redeem-loyalty` | barbeiro (clientes que atendeu) / admin / super_admin | consome os selos da regra ativa |
 | `admin-create-barber` | admin / super_admin | cria login + barbeiro + expediente padrão; `role: "admin"` (dono) só o super_admin |
+| `completion-reminders` | pg_cron (a cada 5 min), sem auth | push ao barbeiro quando um atendimento termina e segue "agendado": abre `/app/?concluir=<id>&dia=<data>`; idempotente (`completion_reminded_at`) |
 | `customer-login` | pública | login do cliente sem senha: celular identifica a conta, o primeiro nome precisa conferir; cria a conta se não existir (adota o histórico de visitante desse celular) e devolve um `token_hash` que o front troca por sessão com `verifyOtp` |
 | `admin-set-password` | admin / super_admin | define uma nova senha (não há "esqueci a senha" por e-mail); senha de dono/super admin só o super_admin troca |
 | `super-set-role` | super_admin | alterna uma conta da equipe entre barbeiro e dono |
@@ -170,6 +171,15 @@ Crie a conta pelo `/cadastro` e promova pelo SQL Editor:
 update public.profiles set role = 'super_admin' where id = (select id from auth.users where email = 'SEU_EMAIL');
 ```
 Depois, cadastre o dono em `/admin` → Contas → "Novo dono".
+
+### Pagamento e faturamento
+
+Concluir um atendimento exige a forma de pagamento (Pix, dinheiro, débito, crédito) e grava o valor recebido (padrão: soma dos serviços). O trigger valida; depois de concluído, só o dono/super admin corrige o pagamento. O faturamento do dono fica em `/app/gestao` → Faturamento (hoje, 7 dias, mês, mês passado; por barbeiro, por forma de pagamento, serviços mais feitos).
+
+O lembrete roda via pg_cron + pg_net. O job é criado uma vez por ambiente:
+```sql
+select private.schedule_completion_reminders('https://<ref>.supabase.co/functions/v1');
+```
 
 ## Decisões registradas
 

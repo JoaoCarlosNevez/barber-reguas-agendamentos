@@ -5,12 +5,22 @@ import { Badge, Button, Card, Notice } from '@/components/ui'
 import { callFunction, errorMessage } from '@/lib/api'
 import { useCatalog } from '@/lib/catalog'
 import { APP_TIMEZONE } from '@/lib/env'
-import { calendarDate, formatPrice, formatTime, STATUS_LABEL } from '@/lib/format'
+import {
+  calendarDate,
+  centsToInput,
+  formatPrice,
+  formatTime,
+  parseBrlToCents,
+  PAYMENT_LABEL,
+  PAYMENT_METHODS,
+  STATUS_LABEL,
+} from '@/lib/format'
 import { addDays, dateInTz, formatBrPhone, zonedToUtc } from '@/lib/shared'
 import { type Enums, supabase } from '@/lib/supabase'
 import { useNow } from '@/hooks/useNow'
 
 type Status = Enums<'appointment_status'>
+type PaymentMethod = Enums<'payment_method'>
 
 const longDay = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
 
@@ -24,7 +34,7 @@ function useDayAgenda(date: string, barberId: string | null) {
       let q = supabase
         .from('appointments')
         .select(
-          `id, starts_at, ends_at, status, cancelled_by,
+          `id, starts_at, ends_at, status, cancelled_by, payment_method, paid_cents,
            barber:barbers(id, display_name),
            customer:customers(id, name, phone, is_guest, auth_user_id),
            appointment_services(service_name, price_cents, duration_min)`,
@@ -78,26 +88,54 @@ function DateNav({ date, today, onChange }: { date: string; today: string; onCha
   )
 }
 
-export function DayAgenda({ barberId, showBarber = false }: { barberId: string | null; showBarber?: boolean }) {
+export function DayAgenda({
+  barberId,
+  showBarber = false,
+  initialDate,
+  focusId,
+}: {
+  barberId: string | null
+  showBarber?: boolean
+  /** dia inicial (YYYY-MM-DD), ex.: vindo do push de "concluir atendimento" */
+  initialDate?: string | null
+  /** abre direto a conclusão deste atendimento */
+  focusId?: string | null
+}) {
   const nowDate = useNow()
   const today = dateInTz(nowDate, APP_TIMEZONE)
-  const [picked, setDate] = useState<string | null>(null)
+  const [picked, setDate] = useState<string | null>(initialDate ?? null)
   const date = picked ?? today
   const agenda = useDayAgenda(date, barberId)
   const catalog = useCatalog()
   const qc = useQueryClient()
-  const [confirm, setConfirm] = useState<{ id: string; status: Status } | null>(null)
+  const [confirm, setConfirm] = useState<{ id: string; status: Status } | null>(
+    focusId ? { id: focusId, status: 'completed' } : null,
+  )
   const [flash, setFlash] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
   const setStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Status }) => {
-      const { error } = await supabase.from('appointments').update({ status }).eq('id', id)
+    mutationFn: async ({
+      id,
+      status,
+      payment,
+    }: {
+      id: string
+      status: Status
+      payment?: { method: PaymentMethod; cents: number }
+    }) => {
+      const patch = payment
+        ? { status, payment_method: payment.method, paid_cents: payment.cents }
+        : { status }
+      const { error } = await supabase.from('appointments').update(patch).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_d, v) => {
       setConfirm(null)
-      setFlash(null)
+      setFlash(
+        v.status === 'completed' ? { tone: 'success', text: 'Atendimento concluído. Selo de fidelidade lançado.' } : null,
+      )
       void qc.invalidateQueries({ queryKey: ['agenda'] })
+      void qc.invalidateQueries({ queryKey: ['revenue'] })
     },
     onError: (err) => setFlash({ tone: 'error', text: errorMessage(err) }),
   })
@@ -114,9 +152,9 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
   const rule = catalog.data?.loyaltyRule ?? null
   const list = agenda.data?.appointments ?? []
   const active = list.filter((a) => a.status !== 'cancelled')
-  const revenue = list
-    .filter((a) => a.status === 'scheduled' || a.status === 'completed')
-    .reduce((t, a) => t + a.appointment_services.reduce((s, x) => s + x.price_cents, 0), 0)
+  const priceOf = (a: (typeof list)[number]) => a.appointment_services.reduce((s, x) => s + x.price_cents, 0)
+  const received = list.filter((a) => a.status === 'completed').reduce((t, a) => t + (a.paid_cents ?? priceOf(a)), 0)
+  const expected = list.filter((a) => a.status === 'scheduled').reduce((t, a) => t + priceOf(a), 0)
   const now = nowDate.getTime()
 
   return (
@@ -130,8 +168,8 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
             <p className="text-xs text-muted">atendimento(s)</p>
           </Card>
           <Card className="py-3">
-            <p className="font-display text-3xl font-bold text-brass">{formatPrice(revenue)}</p>
-            <p className="text-xs text-muted">previsto</p>
+            <p className="font-display text-3xl font-bold text-brass">{formatPrice(received)}</p>
+            <p className="text-xs text-muted">recebido{expected ? ` · + ${formatPrice(expected)} previsto` : ''}</p>
           </Card>
         </div>
       ) : null}
@@ -152,9 +190,13 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
             const stamps = c ? (agenda.data.stamps.get(c.id) ?? 0) : 0
             const canRedeem = rule && c && !c.is_guest && stamps >= rule.stamps_required
             const isConfirming = confirm?.id === a.id
+            const pendingClose = a.status === 'scheduled' && new Date(a.ends_at).getTime() <= now
             return (
-              <li key={a.id}>
-                <Card className={a.status === 'cancelled' ? 'opacity-50' : ''}>
+              <li
+                key={a.id}
+                ref={a.id === focusId ? (el) => el?.scrollIntoView({ block: 'center', behavior: 'smooth' }) : undefined}
+              >
+                <Card className={a.status === 'cancelled' ? 'opacity-50' : pendingClose ? 'border-brass/60' : ''}>
                   <div className="flex items-start gap-3">
                     <div className="w-16 shrink-0">
                       <p className="font-display text-2xl font-bold leading-none">{formatTime(a.starts_at)}</p>
@@ -170,6 +212,14 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
                         {formatPrice(a.appointment_services.reduce((t, s) => t + s.price_cents, 0))}
                         {showBarber && a.barber ? ` · ${a.barber.display_name}` : ''}
                       </p>
+                      {a.status === 'completed' && a.payment_method ? (
+                        <p className="text-sm text-success">
+                          Pago {formatPrice(a.paid_cents ?? priceOf(a))} · {PAYMENT_LABEL[a.payment_method]}
+                        </p>
+                      ) : null}
+                      {pendingClose && !isConfirming ? (
+                        <p className="text-sm text-brass">Terminou: marque como atendido e informe o pagamento.</p>
+                      ) : null}
                       {c ? (
                         <p className="mt-1 flex flex-wrap gap-3 text-sm">
                           <a className="text-brass underline underline-offset-2" href={`tel:${c.phone}`}>
@@ -195,18 +245,21 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
                   </div>
 
                   {a.status === 'scheduled' ? (
-                    isConfirming ? (
+                    isConfirming && confirm.status === 'completed' && started ? (
+                      <CompleteForm
+                        totalCents={priceOf(a)}
+                        loading={setStatus.isPending}
+                        onCancel={() => setConfirm(null)}
+                        onConfirm={(payment) => setStatus.mutate({ id: a.id, status: 'completed', payment })}
+                      />
+                    ) : isConfirming && confirm.status !== 'completed' ? (
                       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
                         <span className="text-sm">
-                          {confirm.status === 'cancelled'
-                            ? 'Cancelar este horário?'
-                            : confirm.status === 'no_show'
-                              ? 'Marcar como falta?'
-                              : 'Confirmar atendimento?'}
+                          {confirm.status === 'cancelled' ? 'Cancelar este horário?' : 'Marcar como falta?'}
                         </span>
                         <Button
                           size="sm"
-                          variant={confirm.status === 'completed' ? 'primary' : 'danger'}
+                          variant="danger"
                           loading={setStatus.isPending}
                           onClick={() => setStatus.mutate(confirm)}
                         >
@@ -257,6 +310,67 @@ export function DayAgenda({ barberId, showBarber = false }: { barberId: string |
           })}
         </ol>
       )}
+    </div>
+  )
+}
+
+/** Concluir atendimento: forma de pagamento (obrigatória) + valor recebido. */
+function CompleteForm({
+  totalCents,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  totalCents: number
+  loading: boolean
+  onConfirm: (p: { method: PaymentMethod; cents: number }) => void
+  onCancel: () => void
+}) {
+  const [method, setMethod] = useState<PaymentMethod | null>(null)
+  const [amount, setAmount] = useState(centsToInput(totalCents))
+  const cents = parseBrlToCents(amount)
+
+  return (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      <p className="text-sm font-semibold">Como foi pago?</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {PAYMENT_METHODS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={method === m}
+            onClick={() => setMethod(m)}
+            className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${
+              method === m ? 'border-brass bg-brass/15 text-brass' : 'border-line text-muted hover:text-cream'
+            }`}
+          >
+            {PAYMENT_LABEL[m]}
+          </button>
+        ))}
+      </div>
+      <label className="block">
+        <span className="text-sm text-muted">Valor recebido (R$)</span>
+        <input
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-cream"
+        />
+        {cents === null ? <span className="text-xs text-danger">Valor inválido.</span> : null}
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={!method || cents === null}
+          loading={loading}
+          onClick={() => method && cents !== null && onConfirm({ method, cents })}
+        >
+          ✓ Concluir atendimento
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          Voltar
+        </Button>
+      </div>
     </div>
   )
 }

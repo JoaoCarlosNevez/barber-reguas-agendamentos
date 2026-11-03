@@ -58,3 +58,26 @@ export const STATUS_LABEL = {
   completed: 'Atendido',
   no_show: 'Não compareceu',
 } as const
+
+export const PAYMENT_LABEL = {
+  pix: 'Pix',
+  cash: 'Dinheiro',
+  debit: 'Débito',
+  credit: 'Crédito',
+} as const
+
+export const PAYMENT_METHODS = ['pix', 'cash', 'debit', 'credit'] as const
+
+/** "45,00" / "45" / "R$ 45,5" -> 4550 centavos; null se inválido. */
+export function parseBrlToCents(input: string): number | null {
+  const clean = input.replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')
+  if (clean === '') return null
+  const value = Number(clean)
+  if (!Number.isFinite(value) || value < 0 || value > 100000) return null
+  return Math.round(value * 100)
+}
+
+/** 4550 -> "45,50" (para preencher campo de valor) */
+export function centsToInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',')
+}
