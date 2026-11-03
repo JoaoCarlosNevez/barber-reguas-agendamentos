@@ -252,6 +252,28 @@ describe('admin-create-barber', () => {
   })
 })
 
+describe('admin-set-password', () => {
+  it('só admin troca; a senha nova passa a valer', async () => {
+    const adm = await tokenFor('admin@barbearia.dev')
+    const rafael = await tokenFor('rafael@barbearia.dev')
+    const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const target = users.users.find((u) => u.email === BARBER_EMAIL)
+    if (!target) throw new Error('barbeiro de teste não encontrado')
+    const body = { user_id: target.id, password: 'Trocada@456' }
+
+    expect((await callFn('admin-set-password', body)).status).toBe(401)
+    expect((await callFn('admin-set-password', body, rafael)).status).toBe(403)
+    expect((await callFn('admin-set-password', { ...body, password: 'curta' }, adm)).status).toBe(422)
+
+    const ok = await callFn('admin-set-password', body, adm)
+    expect(ok.status).toBe(200)
+
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    const login = await c.auth.signInWithPassword({ email: BARBER_EMAIL, password: 'Trocada@456' })
+    expect(login.error).toBeNull()
+  })
+})
+
 describe('push', () => {
   it('só barbeiro/admin assina; teste não quebra com endpoint inválido', async () => {
     const cliente = await tokenFor('cliente@barbearia.dev')

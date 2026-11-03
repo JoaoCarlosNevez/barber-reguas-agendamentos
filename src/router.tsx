@@ -3,9 +3,7 @@ import { Layout } from '@/components/Layout'
 import { RequireRole } from '@/components/RequireRole'
 import { AccountPage } from '@/pages/account/AccountPage'
 import { AdminPage } from '@/pages/admin/AdminPage'
-import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { SignupPage } from '@/pages/auth/SignupPage'
 import { BarberPage } from '@/pages/barber/BarberPage'
 import { AppointmentPage } from '@/pages/booking/AppointmentPage'
@@ -22,8 +20,6 @@ export const router = createBrowserRouter([
       { path: 'agendamento/:token', element: <AppointmentPage /> },
       { path: 'entrar', element: <LoginPage /> },
       { path: 'cadastro', element: <SignupPage /> },
-      { path: 'esqueci-senha', element: <ForgotPasswordPage /> },
-      { path: 'redefinir-senha', element: <ResetPasswordPage /> },
       {
         path: 'minha-conta',
         element: (

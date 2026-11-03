@@ -106,8 +106,8 @@ function NewBarberForm({ onDone }: { onDone: () => void }) {
     <Card className="border-brass/50">
       <form noValidate onSubmit={form.handleSubmit((v) => create.mutate(v))} className="space-y-3">
         <p className="text-sm text-muted">
-          Cria o login do barbeiro. Passe o e-mail e a senha para ele; ele pode trocar a senha depois em "Esqueci minha
-          senha".
+          Cria o login do barbeiro. Passe o e-mail e a senha para ele. Se ele esquecer, troque a senha aqui no cadastro
+          dele.
         </p>
         <Input label="Nome de exibição" error={form.formState.errors.name?.message} {...form.register('name')} />
         <Input
@@ -188,6 +188,7 @@ function BarberEditor({ barber }: { barber: BarberRow }) {
   return (
     <div className="mt-4 space-y-6 border-t border-line pt-4">
       <BarberBasics barber={barber} />
+      <BarberPassword barber={barber} />
       <BarberServices barber={barber} />
       <WorkingHoursEditor barberId={barber.id} />
       <TimeOffEditor barberId={barber.id} />
@@ -229,6 +230,50 @@ function BarberBasics({ barber }: { barber: BarberRow }) {
         Ativo (aparece no agendamento)
       </label>
       {save.isError ? <Notice tone="error">{errorMessage(save.error)}</Notice> : null}
+    </div>
+  )
+}
+
+function BarberPassword({ barber }: { barber: BarberRow }) {
+  const [password, setPassword] = useState('')
+  const save = useMutation({
+    mutationFn: () => callFunction('admin-set-password', { user_id: barber.profile_id, password }),
+    onSuccess: () => setPassword(''),
+  })
+  const tooShort = password.length < 8
+
+  return (
+    <div>
+      <h3 className="mb-1 text-base font-semibold">Senha</h3>
+      <p className="mb-2 text-xs text-muted">Esqueceu a senha? Defina uma nova e passe para o barbeiro.</p>
+      <div className="flex items-end gap-2">
+        <Input
+          label="Nova senha"
+          className="flex-1"
+          type="text"
+          autoComplete="off"
+          maxLength={72}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value)
+            save.reset()
+          }}
+        />
+        <Button variant="secondary" disabled={tooShort} loading={save.isPending} onClick={() => save.mutate()}>
+          Trocar
+        </Button>
+      </div>
+      {password && tooShort ? <p className="mt-1 text-xs text-muted">Mínimo de 8 caracteres.</p> : null}
+      {save.isError ? (
+        <div className="mt-2">
+          <Notice tone="error">{errorMessage(save.error)}</Notice>
+        </div>
+      ) : null}
+      {save.isSuccess ? (
+        <div className="mt-2">
+          <Notice tone="success">Senha trocada. Passe a nova senha para o barbeiro.</Notice>
+        </div>
+      ) : null}
     </div>
   )
 }

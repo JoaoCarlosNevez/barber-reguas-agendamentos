@@ -72,11 +72,7 @@ export function LoginPage() {
         <Button type="submit" className="w-full" size="lg" loading={login.isPending}>
           Entrar
         </Button>
-        <p className="text-center text-sm">
-          <Link to="/esqueci-senha" className="text-muted underline underline-offset-4 hover:text-cream">
-            Esqueci minha senha
-          </Link>
-        </p>
+        <p className="text-center text-sm text-muted">Esqueceu a senha? Fale com a barbearia.</p>
       </form>
     </AuthShell>
   )

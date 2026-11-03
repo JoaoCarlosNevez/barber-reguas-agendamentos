@@ -135,6 +135,7 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | `push` | barbeiro/admin | `subscribe` (salva a assinatura Web Push) e `test` |
 | `redeem-loyalty` | barbeiro (clientes que atendeu) / admin | consome os selos da regra ativa |
 | `admin-create-barber` | admin | cria login + barbeiro + expediente padrão |
+| `admin-set-password` | admin | define uma nova senha (não há "esqueci a senha" por e-mail) |
 
 Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Push real usa `npm:web-push` com as chaves VAPID dos secrets.
 
@@ -144,7 +145,7 @@ Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Pus
 | --- | --- |
 | `/` | agendamento (serviços → barbeiro → dia/horário → dados) |
 | `/agendamento/:token` | ver, cancelar, pôr na agenda (.ics), compartilhar |
-| `/entrar`, `/cadastro`, `/esqueci-senha`, `/redefinir-senha` | auth |
+| `/entrar`, `/cadastro` | auth (senha esquecida: o admin troca no cadastro do barbeiro) |
 | `/minha-conta` | cartão fidelidade, próximos horários, histórico, dados |
 | `/barbeiro` | agenda do dia, atendido/faltou/cancelar, resgate de prêmio, ativar push |
 | `/admin` | agenda geral, serviços, barbeiros (serviços, expediente, folgas), fidelidade, ajustes |
