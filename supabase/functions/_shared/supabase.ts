@@ -76,3 +76,18 @@ export async function requireUser(req: Request, roles?: readonly UserRole[]): Pr
   }
   return { id: user.id, role: data.role }
 }
+
+export const STAFF_ROLES = ['barber', 'admin', 'super_admin'] as const satisfies readonly UserRole[]
+
+/** Usuário da equipe (barbeiro/dono/super admin) ou null. Não lança para visitante/cliente. */
+export async function optionalStaff(req: Request): Promise<AuthedUser | null> {
+  // sessão inválida aqui não deve quebrar rotas públicas: vira "não é equipe"
+  const user = await optionalUser(req).catch(() => null)
+  if (!user) return null
+  const { data } = await adminClient().from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (!data || !(STAFF_ROLES as readonly UserRole[]).includes(data.role)) return null
+  return { id: user.id, role: data.role }
+}
+
+/** Equipe pode marcar "para agora": aceita horários que começaram há até 30 min. */
+export const STAFF_NOTICE_MIN = -30

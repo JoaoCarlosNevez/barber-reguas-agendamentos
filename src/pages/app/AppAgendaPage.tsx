@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { DayAgenda } from '@/components/DayAgenda'
 import { PushToggle } from '@/components/PushToggle'
 import { ErrorState, Spinner } from '@/components/states'
-import { Select } from '@/components/ui'
+import { Button, Select } from '@/components/ui'
 import { errorMessage } from '@/lib/api'
 import { isManager, useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useAllBarbers } from '@/pages/admin/queries'
+import { StaffBookingForm } from './StaffBookingForm'
 
 export function AppAgendaPage() {
   const { session, profile, role } = useAuth()
@@ -17,6 +19,8 @@ export function AppAgendaPage() {
   const focusId = params.get('concluir')
   const rawDay = params.get('dia')
   const focusDay = rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) ? rawDay : null
+  const [booking, setBooking] = useState(false)
+  const allBarbers = useAllBarbers()
 
   const barber = useQuery({
     queryKey: ['my-barber', uid],
@@ -42,6 +46,23 @@ export function AppAgendaPage() {
         <p className="mt-1 text-muted">{barber.data?.display_name ?? profile?.name}</p>
       </header>
       <PushToggle />
+      {booking ? (
+        <StaffBookingForm
+          barbers={
+            isManager(role)
+              ? (allBarbers.data ?? []).filter((b) => b.active)
+              : barber.data
+                ? [{ id: barber.data.id, display_name: barber.data.display_name }]
+                : []
+          }
+          defaultBarberId={barber.data?.id ?? allBarbers.data?.find((b) => b.active)?.id ?? ''}
+          onClose={() => setBooking(false)}
+        />
+      ) : barber.data || isManager(role) ? (
+        <Button className="w-full" size="lg" onClick={() => setBooking(true)}>
+          + Novo agendamento
+        </Button>
+      ) : null}
       {isManager(role) ? (
         <ManagerAgenda myBarberId={barber.data?.id ?? null} focusId={focusId} focusDay={focusDay} />
       ) : barber.data ? (

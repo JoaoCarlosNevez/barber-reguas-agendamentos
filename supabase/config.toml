@@ -450,3 +450,6 @@ verify_jwt = false
 
 [functions.completion-reminders]
 verify_jwt = false
+
+[functions.staff-create-appointment]
+verify_jwt = false

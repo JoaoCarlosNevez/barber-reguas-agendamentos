@@ -379,6 +379,35 @@ describe('um celular = uma conta', () => {
   })
 })
 
+describe('staff-create-appointment (barbeiro agenda pelo app)', () => {
+  it('barbeiro agenda na própria agenda; não na de outro; cliente não pode', async () => {
+    const rafael = await tokenFor('rafael@barbearia.dev')
+    const cliente = await tokenFor('cliente@barbearia.dev')
+    const date = futureDate(7)
+    const avail = await callFn('get-availability', { barber_id: RAFAEL, service_ids: [CORTE], date }, rafael)
+    expect(avail.status).toBe(200)
+    const slot = avail.body.slots[0].starts_at as string
+    const body = {
+      barber_id: RAFAEL,
+      service_ids: [CORTE],
+      starts_at: slot,
+      customer: { name: 'Cliente Balcão', phone: `${PHONE_PREFIX}00401` },
+    }
+
+    expect((await callFn('staff-create-appointment', body)).status).toBe(401)
+    expect((await callFn('staff-create-appointment', body, cliente)).status).toBe(403)
+    expect((await callFn('staff-create-appointment', { ...body, barber_id: 'ba000000-0000-4000-8000-000000000002' }, rafael)).status).toBe(403)
+
+    const ok = await callFn('staff-create-appointment', body, rafael)
+    expect(ok.status).toBe(201)
+    expect(ok.body.token).toBeTruthy()
+    createdAppointments.push(ok.body.appointment_id as string)
+
+    const again = await callFn('staff-create-appointment', body, rafael)
+    expect(again.status).toBe(409)
+  })
+})
+
 describe('conclusão com pagamento + lembrete', () => {
   it('lembra o barbeiro uma vez; barbeiro conclui informando o pagamento', async () => {
     // atendimento que terminou há ~1h (Corte 30 min), em horário redondo
