@@ -23,9 +23,24 @@ export function useAuth(): AuthState {
   return ctx
 }
 
+/** Equipe da barbearia (usa o app PWA em /app). */
+export const STAFF_ROLES = ['barber', 'admin', 'super_admin'] as const satisfies readonly Role[]
+/** Quem gerencia a barbearia (serviços, barbeiros, horários...). */
+export const MANAGER_ROLES = ['admin', 'super_admin'] as const satisfies readonly Role[]
+
+export const isStaff = (role: Role | null) => role !== null && (STAFF_ROLES as readonly Role[]).includes(role)
+export const isManager = (role: Role | null) => role !== null && (MANAGER_ROLES as readonly Role[]).includes(role)
+
 /** Para onde mandar o usuário depois do login, conforme o papel. */
 export function homeForRole(role: Role | null): string {
-  if (role === 'admin') return '/admin'
-  if (role === 'barber') return '/barbeiro'
+  if (role === 'super_admin') return '/admin'
+  if (role === 'admin' || role === 'barber') return '/app'
   return '/minha-conta'
+}
+
+export const ROLE_LABEL: Record<Role, string> = {
+  customer: 'Cliente',
+  barber: 'Barbeiro',
+  admin: 'Dono',
+  super_admin: 'Super admin',
 }

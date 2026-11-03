@@ -26,7 +26,7 @@ export function AccountPage() {
           <h1 className="text-4xl font-bold leading-none">Olá, {profile.name.split(' ')[0]}</h1>
           {role !== 'customer' ? (
             <Link to={homeForRole(role)} className="mt-2 inline-block text-sm text-brass underline underline-offset-4">
-              Ir para o painel {role === 'admin' ? 'admin' : 'do barbeiro'} →
+              {role === 'super_admin' ? 'Ir para o painel super admin →' : 'Abrir o app da equipe →'}
             </Link>
           ) : null}
         </div>
@@ -266,7 +266,7 @@ const profileSchema = z.object({
 })
 type ProfileValues = z.infer<typeof profileSchema>
 
-function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({ profile }: { profile: Profile }) {
   const qc = useQueryClient()
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),

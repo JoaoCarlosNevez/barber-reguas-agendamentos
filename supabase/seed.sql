@@ -1,7 +1,8 @@
 -- =============================================================================
 -- Seed de desenvolvimento (rodado por `supabase db reset`)
 -- Usuários (senha de todos: Senha@123):
---   admin@barbearia.dev     -> admin
+--   super@barbearia.dev     -> super_admin (dono do sistema)
+--   admin@barbearia.dev     -> admin (dono da barbearia, também atende)
 --   rafael@barbearia.dev    -> barbeiro
 --   lucas@barbearia.dev     -> barbeiro
 --   cliente@barbearia.dev   -> cliente
@@ -38,10 +39,14 @@ begin
 end;
 $$;
 
+select pg_temp.seed_user('a0000000-0000-4000-8000-000000000000', 'super@barbearia.dev',   'Super Admin',       '+5511900000000', 'super_admin');
 select pg_temp.seed_user('a0000000-0000-4000-8000-000000000001', 'admin@barbearia.dev',   'Dono da Barbearia', '+5511900000001', 'admin');
 select pg_temp.seed_user('b0000000-0000-4000-8000-000000000001', 'rafael@barbearia.dev',  'Rafael Souza',      '+5511900000002', 'barber');
 select pg_temp.seed_user('b0000000-0000-4000-8000-000000000002', 'lucas@barbearia.dev',   'Lucas Almeida',     '+5511900000003', 'barber');
 select pg_temp.seed_user('c0000000-0000-4000-8000-000000000001', 'cliente@barbearia.dev', 'João Cliente',      '+5511988887777', 'customer');
+
+-- O trigger de signup só reconhece barber/admin; o super_admin é definido aqui.
+update public.profiles set role = 'super_admin' where id = 'a0000000-0000-4000-8000-000000000000';
 
 -- Barbeiros
 insert into public.barbers (id, profile_id, display_name, active) values

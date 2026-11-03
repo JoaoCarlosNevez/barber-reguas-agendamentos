@@ -37,7 +37,7 @@ export async function optionalUser(req: Request): Promise<{ id: string } | null>
   return { id: data.user.id }
 }
 
-export type UserRole = 'customer' | 'barber' | 'admin'
+export type UserRole = Database['public']['Enums']['user_role']
 
 export interface AuthedUser {
   id: string

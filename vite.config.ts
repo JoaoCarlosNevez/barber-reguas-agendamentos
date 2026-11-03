@@ -15,15 +15,17 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Barbearia · Agendamento',
+        // Só o app da equipe é instalável (o agendamento é web mobile).
+        id: '/app/',
+        name: 'Barbearia · Equipe',
         short_name: 'Barbearia',
-        description: 'Agende seu horário na barbearia em poucos toques.',
+        description: 'Agenda e gestão da barbearia.',
         lang: 'pt-BR',
         theme_color: '#0f0e0c',
         background_color: '#0f0e0c',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: '/app/',
+        scope: '/app/',
         icons: [
           { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },

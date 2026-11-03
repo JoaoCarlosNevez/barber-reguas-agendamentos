@@ -12,6 +12,9 @@ const CORTE = '5e000000-0000-4000-8000-000000000001'
 const CLIENTE_USER = 'c0000000-0000-4000-8000-000000000001'
 const PHONE_PREFIX = '+55119701' // telefones de teste deste arquivo: +55119701XXXXX
 const BARBER_EMAIL = 'novo.barbeiro.teste@barbearia.dev'
+const OWNER_EMAIL = 'novo.dono.teste@barbearia.dev'
+const SUPER_USER = 'a0000000-0000-4000-8000-000000000000'
+const CLIENTE_EMAIL = 'cliente@barbearia.dev'
 
 const apiUrl = inject('apiUrl')
 const anonKey = inject('anonKey')
@@ -67,7 +70,9 @@ async function cleanup() {
   if (createdRedemptions.length) await admin.from('loyalty_redemptions').delete().in('id', createdRedemptions)
   if (createdAppointments.length) await admin.from('appointments').delete().in('id', createdAppointments)
   const { data: users } = await admin.auth.admin.listUsers()
-  for (const u of users.users.filter((x) => x.email === BARBER_EMAIL)) await admin.auth.admin.deleteUser(u.id)
+  for (const u of users.users.filter((x) => x.email === BARBER_EMAIL || x.email === OWNER_EMAIL)) {
+    await admin.auth.admin.deleteUser(u.id)
+  }
   await admin.from('push_subscriptions').delete().like('endpoint', 'https://push.example.test/%')
 }
 
@@ -271,6 +276,64 @@ describe('admin-set-password', () => {
     const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
     const login = await c.auth.signInWithPassword({ email: BARBER_EMAIL, password: 'Trocada@456' })
     expect(login.error).toBeNull()
+  })
+})
+
+describe('super admin', () => {
+  it('só o super admin cadastra dono; dono nasce admin e também barbeiro', async () => {
+    const adm = await tokenFor('admin@barbearia.dev')
+    const sup = await tokenFor('super@barbearia.dev')
+    const body = { name: 'Dono Teste', email: OWNER_EMAIL, password: 'Senha@123', role: 'admin' }
+
+    expect((await callFn('admin-create-barber', body, adm)).status).toBe(403)
+    const ok = await callFn('admin-create-barber', body, sup)
+    expect(ok.status).toBe(201)
+    const { data } = await admin.from('barbers').select('profiles(role)').eq('id', ok.body.barber_id as string).single()
+    expect(data?.profiles?.role).toBe('admin')
+  })
+
+  it('dono não troca senha de dono/super admin; super admin troca', async () => {
+    const adm = await tokenFor('admin@barbearia.dev')
+    const sup = await tokenFor('super@barbearia.dev')
+    const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const owner = users.users.find((u) => u.email === OWNER_EMAIL)
+    if (!owner) throw new Error('dono de teste não encontrado')
+
+    expect((await callFn('admin-set-password', { user_id: owner.id, password: 'Trocada@456' }, adm)).status).toBe(403)
+    expect((await callFn('admin-set-password', { user_id: SUPER_USER, password: 'Trocada@456' }, adm)).status).toBe(403)
+    expect((await callFn('admin-set-password', { user_id: owner.id, password: 'Trocada@456' }, sup)).status).toBe(200)
+  })
+
+  it('super-set-role: só super admin; alterna barbeiro <-> dono; não mexe em cliente nem em si mesmo', async () => {
+    const adm = await tokenFor('admin@barbearia.dev')
+    const sup = await tokenFor('super@barbearia.dev')
+    const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const owner = users.users.find((u) => u.email === OWNER_EMAIL)
+    const cliente = users.users.find((u) => u.email === CLIENTE_EMAIL)
+    if (!owner || !cliente) throw new Error('usuários de teste não encontrados')
+
+    expect((await callFn('super-set-role', { user_id: owner.id, role: 'barber' }, adm)).status).toBe(403)
+    expect((await callFn('super-set-role', { user_id: owner.id, role: 'barber' }, sup)).status).toBe(200)
+    const { data: p } = await admin.from('profiles').select('role').eq('id', owner.id).single()
+    expect(p?.role).toBe('barber')
+    expect((await callFn('super-set-role', { user_id: owner.id, role: 'admin' }, sup)).status).toBe(200)
+
+    expect((await callFn('super-set-role', { user_id: cliente.id, role: 'admin' }, sup)).status).toBe(409)
+    expect((await callFn('super-set-role', { user_id: SUPER_USER, role: 'barber' }, sup)).status).toBe(400)
+  })
+
+  it('RLS: dono não enxerga o profile do super admin; super admin enxerga todos', async () => {
+    const asUser = async (email: string) => {
+      const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+      await c.auth.signInWithPassword({ email, password: 'Senha@123' })
+      return c
+    }
+    const adm = await asUser('admin@barbearia.dev')
+    const sup = await asUser('super@barbearia.dev')
+    const a = await adm.from('profiles').select('id').eq('id', SUPER_USER)
+    expect(a.data).toEqual([])
+    const s = await sup.from('profiles').select('id').eq('role', 'admin')
+    expect(s.data?.length).toBeGreaterThan(0)
   })
 })
 

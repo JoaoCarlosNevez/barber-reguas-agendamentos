@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { EmptyState, ErrorState, Spinner } from '@/components/states'
 import { Badge, Button, Card, Input, Notice, SectionTitle } from '@/components/ui'
 import { callFunction, errorMessage } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { APP_TIMEZONE } from '@/lib/env'
 import { formatShortDate, formatTime } from '@/lib/format'
 import { addDays, dateInTz, zonedToUtc } from '@/lib/shared'
@@ -26,10 +27,14 @@ function useInvalidateAll() {
 
 export function BarbersAdmin() {
   const barbers = useAllBarbers()
+  const { session, role } = useAuth()
   const [open, setOpen] = useState<string | 'new' | null>(null)
 
   if (barbers.isPending) return <Spinner />
   if (barbers.isError) return <ErrorState message={errorMessage(barbers.error)} />
+
+  const uid = session?.user.id
+  const iAmBarber = barbers.data.some((b) => b.profile_id === uid)
 
   return (
     <section>
@@ -45,6 +50,7 @@ export function BarbersAdmin() {
         Barbeiros
       </SectionTitle>
       <div className="space-y-2">
+        {role === 'admin' && uid && !iAmBarber ? <AlsoBarberCard userId={uid} /> : null}
         {open === 'new' ? <NewBarberForm onDone={() => setOpen(null)} /> : null}
         {barbers.data.length === 0 && open !== 'new' ? (
           <EmptyState title="Nenhum barbeiro">Cadastre quem vai atender para abrir a agenda.</EmptyState>
@@ -75,6 +81,68 @@ export function BarbersAdmin() {
 }
 
 // ---------------------------------------------------------------------------
+// Dono que também atende: liga a própria conta a um cadastro de barbeiro
+// ---------------------------------------------------------------------------
+function AlsoBarberCard({ userId }: { userId: string }) {
+  const { profile } = useAuth()
+  const services = useAdminServices()
+  const invalidate = useInvalidateAll()
+  const qc = useQueryClient()
+  const [name, setName] = useState(profile?.name.split(' ')[0] ?? '')
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { data: barber, error } = await supabase
+        .from('barbers')
+        .insert({ profile_id: userId, display_name: name.trim() })
+        .select('id')
+        .single()
+      if (error) throw error
+      const hours = [1, 2, 3, 4, 5, 6].map((weekday) => ({
+        barber_id: barber.id,
+        weekday,
+        start_time: '09:00',
+        end_time: weekday === 6 ? '14:00' : '19:00',
+        break_start: weekday === 6 ? null : '12:00',
+        break_end: weekday === 6 ? null : '13:00',
+      }))
+      const svc = (services.data ?? []).filter((s) => s.active).map((s) => ({ barber_id: barber.id, service_id: s.id }))
+      const [wh, bs] = await Promise.all([
+        supabase.from('working_hours').insert(hours),
+        svc.length ? supabase.from('barber_services').insert(svc) : Promise.resolve({ error: null }),
+      ])
+      if (wh.error) throw wh.error
+      if (bs.error) throw bs.error
+    },
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: ['my-barber'] })
+    },
+  })
+
+  return (
+    <Card className="border-brass/50">
+      <p className="font-semibold">Você também atende?</p>
+      <p className="mt-1 text-sm text-muted">
+        Entre na agenda como barbeiro: os clientes poderão marcar com você e você recebe os avisos no app. Começa com
+        todos os serviços e o expediente padrão (seg–sex 9h–19h, sáb 9h–14h). Dá para ajustar depois.
+      </p>
+      <div className="mt-3 flex items-end gap-2">
+        <Input label="Seu nome na agenda" className="flex-1" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
+        <Button disabled={name.trim().length < 1} loading={create.isPending} onClick={() => create.mutate()}>
+          Atender também
+        </Button>
+      </div>
+      {create.isError ? (
+        <div className="mt-2">
+          <Notice tone="error">{errorMessage(create.error)}</Notice>
+        </div>
+      ) : null}
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Novo barbeiro
 // ---------------------------------------------------------------------------
 const newSchema = z.object({
@@ -84,7 +152,7 @@ const newSchema = z.object({
 })
 type NewValues = z.infer<typeof newSchema>
 
-function NewBarberForm({ onDone }: { onDone: () => void }) {
+export function NewBarberForm({ onDone, kind = 'barber' }: { onDone: () => void; kind?: 'barber' | 'admin' }) {
   const services = useAdminServices()
   const invalidate = useInvalidateAll()
   const [picked, setServiceIds] = useState<string[] | null>(null)
@@ -95,7 +163,7 @@ function NewBarberForm({ onDone }: { onDone: () => void }) {
   })
 
   const create = useMutation({
-    mutationFn: (v: NewValues) => callFunction('admin-create-barber', { ...v, service_ids: serviceIds }),
+    mutationFn: (v: NewValues) => callFunction('admin-create-barber', { ...v, service_ids: serviceIds, role: kind }),
     onSuccess: () => {
       invalidate()
       onDone()
@@ -106,8 +174,9 @@ function NewBarberForm({ onDone }: { onDone: () => void }) {
     <Card className="border-brass/50">
       <form noValidate onSubmit={form.handleSubmit((v) => create.mutate(v))} className="space-y-3">
         <p className="text-sm text-muted">
-          Cria o login do barbeiro. Passe o e-mail e a senha para ele. Se ele esquecer, troque a senha aqui no cadastro
-          dele.
+          {kind === 'admin'
+            ? 'Cria o login do dono da barbearia. Ele também aparece como barbeiro na agenda e gerencia a barbearia pelo app.'
+            : 'Cria o login do barbeiro. Passe o e-mail e a senha para ele. Se ele esquecer, troque a senha aqui no cadastro dele.'}
         </p>
         <Input label="Nome de exibição" error={form.formState.errors.name?.message} {...form.register('name')} />
         <Input
@@ -188,7 +257,7 @@ function BarberEditor({ barber }: { barber: BarberRow }) {
   return (
     <div className="mt-4 space-y-6 border-t border-line pt-4">
       <BarberBasics barber={barber} />
-      <BarberPassword barber={barber} />
+      <PasswordReset userId={barber.profile_id} />
       <BarberServices barber={barber} />
       <WorkingHoursEditor barberId={barber.id} />
       <TimeOffEditor barberId={barber.id} />
@@ -234,10 +303,10 @@ function BarberBasics({ barber }: { barber: BarberRow }) {
   )
 }
 
-function BarberPassword({ barber }: { barber: BarberRow }) {
+export function PasswordReset({ userId }: { userId: string }) {
   const [password, setPassword] = useState('')
   const save = useMutation({
-    mutationFn: () => callFunction('admin-set-password', { user_id: barber.profile_id, password }),
+    mutationFn: () => callFunction('admin-set-password', { user_id: userId, password }),
     onSuccess: () => setPassword(''),
   })
   const tooShort = password.length < 8
@@ -245,7 +314,7 @@ function BarberPassword({ barber }: { barber: BarberRow }) {
   return (
     <div>
       <h3 className="mb-1 text-base font-semibold">Senha</h3>
-      <p className="mb-2 text-xs text-muted">Esqueceu a senha? Defina uma nova e passe para o barbeiro.</p>
+      <p className="mb-2 text-xs text-muted">Esqueceu a senha? Defina uma nova e passe para a pessoa.</p>
       <div className="flex items-end gap-2">
         <Input
           label="Nova senha"
@@ -271,7 +340,7 @@ function BarberPassword({ barber }: { barber: BarberRow }) {
       ) : null}
       {save.isSuccess ? (
         <div className="mt-2">
-          <Notice tone="success">Senha trocada. Passe a nova senha para o barbeiro.</Notice>
+          <Notice tone="success">Senha trocada. Passe a nova senha para a pessoa.</Notice>
         </div>
       ) : null}
     </div>

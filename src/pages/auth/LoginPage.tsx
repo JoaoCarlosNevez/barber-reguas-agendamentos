@@ -20,7 +20,8 @@ function safeNext(next: string | null): string | null {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : null
 }
 
-export function LoginPage() {
+export function LoginPage({ variant = 'site' }: { variant?: 'site' | 'app' }) {
+  const isApp = variant === 'app'
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))
@@ -34,23 +35,27 @@ export function LoginPage() {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
       return profile?.role ?? null
     },
-    onSuccess: (r) => void navigate(next ?? homeForRole(r), { replace: true }),
+    onSuccess: (r) => void navigate(next ?? (isApp ? '/app' : homeForRole(r)), { replace: true }),
   })
 
   if (ready && session && role && !login.isPending && !login.isSuccess) {
-    return <Navigate to={next ?? homeForRole(role)} replace />
+    return <Navigate to={next ?? (isApp ? '/app' : homeForRole(role))} replace />
   }
 
   return (
     <AuthShell
-      title="Entrar"
+      title={isApp ? 'Entrar na equipe' : 'Entrar'}
       subtitle={
+        isApp ? (
+          'Use o e-mail e a senha que o dono da barbearia cadastrou para você.'
+        ) : (
         <>
           Não tem conta?{' '}
           <Link to="/cadastro" className="text-brass underline underline-offset-4">
             Crie em 30 segundos
           </Link>
         </>
+        )
       }
     >
       <form noValidate onSubmit={form.handleSubmit((v) => login.mutate(v))} className="space-y-4">
@@ -72,7 +77,9 @@ export function LoginPage() {
         <Button type="submit" className="w-full" size="lg" loading={login.isPending}>
           Entrar
         </Button>
-        <p className="text-center text-sm text-muted">Esqueceu a senha? Fale com a barbearia.</p>
+        <p className="text-center text-sm text-muted">
+          Esqueceu a senha? Fale com {isApp ? 'o dono da' : 'a'} barbearia.
+        </p>
       </form>
     </AuthShell>
   )

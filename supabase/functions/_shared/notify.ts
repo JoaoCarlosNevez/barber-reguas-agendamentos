@@ -40,7 +40,7 @@ export async function notifyBarber(db: AdminClient, fn: string, event: BarberEve
     const delivered = await sendPushToUser(db, fn, barberRes.data.profile_id, {
       title: created ? 'Novo agendamento' : 'Agendamento cancelado',
       body: `${services} · ${when}`,
-      url: '/barbeiro',
+      url: '/app/',
       tag: `appt-${event.appointmentId}`,
     })
     log.info(fn, 'push_sent', { type: event.type, appointment_id: event.appointmentId, delivered })

@@ -1,9 +1,10 @@
 import { Link, NavLink, Outlet } from 'react-router'
-import { useAuth } from '@/lib/auth'
+import { homeForRole, isStaff, useAuth } from '@/lib/auth'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded px-2 py-1 text-sm transition-colors ${isActive ? 'text-brass' : 'text-muted hover:text-cream'}`
 
+/** Site público (web mobile): agendamento e área do cliente. */
 export function Layout() {
   const { session, role } = useAuth()
 
@@ -18,14 +19,9 @@ export function Layout() {
           <NavLink to="/" end className={navClass}>
             Agendar
           </NavLink>
-          {role === 'barber' || role === 'admin' ? (
-            <NavLink to="/barbeiro" className={navClass}>
-              Agenda
-            </NavLink>
-          ) : null}
-          {role === 'admin' ? (
-            <NavLink to="/admin" className={navClass}>
-              Admin
+          {role === 'super_admin' || isStaff(role) ? (
+            <NavLink to={homeForRole(role)} className={navClass}>
+              Painel
             </NavLink>
           ) : null}
           <NavLink to={session ? '/minha-conta' : '/entrar'} className={navClass}>

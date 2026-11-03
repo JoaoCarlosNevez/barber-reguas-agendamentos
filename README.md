@@ -1,6 +1,10 @@
 # Barbearia · Agendamento (PWA)
 
-App de agendamento para barbearia: página pública de agendamento, área do cliente com cartão fidelidade, painel PWA do barbeiro com Web Push e painel admin.
+App de agendamento para barbearia, em três frentes:
+
+- **Site (web mobile):** agendamento público e área do cliente com cartão fidelidade. Não é instalável.
+- **App da equipe (PWA em `/app/`):** dono e barbeiros. Agenda com Web Push; o dono também gerencia a barbearia por ali.
+- **Painel super admin (web em `/admin`):** gestão completa + contas de donos/barbeiros.
 
 **Stack:** React 19 + TypeScript (Vite 8), React Router, TanStack Query, Tailwind CSS 4, react-hook-form + zod · Supabase (Postgres + Auth + RLS + Edge Functions em Deno) · vite-plugin-pwa (injectManifest).
 
@@ -44,7 +48,8 @@ O Supabase CLI é dependência de dev (`npx supabase ...`), não precisa instala
 
 | E-mail | Papel |
 | --- | --- |
-| `admin@barbearia.dev` | admin |
+| `super@barbearia.dev` | super admin (painel web `/admin`) |
+| `admin@barbearia.dev` | dono (admin da barbearia, app `/app/`) |
 | `rafael@barbearia.dev` | barbeiro (faz todos os serviços) |
 | `lucas@barbearia.dev` | barbeiro (sem pigmentação) |
 | `cliente@barbearia.dev` | cliente |
@@ -91,7 +96,8 @@ Migrations em `supabase/migrations`:
 | anon | só leitura de catálogo: `services`/`barbers` ativos (colunas públicas), `barber_services`, `loyalty_rules` ativas, `app_settings`. **Sem acesso** a clientes, agendamentos, perfis etc. — fluxo público passa pelas Edge Functions. |
 | cliente | lê o próprio `profile`, `customer`, agendamentos, serviços do agendamento, selos e resgates. Edita só `name`/`phone` do profile. |
 | barbeiro | lê/atualiza (só `status`) agendamentos com o seu `barber_id`; lê clientes que já atendeu e os selos deles; lê seus horários e bloqueios. |
-| admin | leitura total; escrita no catálogo, horários, bloqueios, regras e configurações. |
+| admin (dono) | leitura total (exceto o profile do super admin); escrita no catálogo, horários, bloqueios, regras e configurações. Pode também ter cadastro de barbeiro e atender. |
+| super_admin | tudo do admin + vê todos os profiles; só ele cria/rebaixa donos e troca senha de donos (nas functions). |
 | service role | Edge Functions (criação de agendamento, cancelamento por token, push, resgate). |
 
 Testes: `npm run db:test` (44 asserções pgTAP) provam, entre outros, que anon e cliente A não leem dados do cliente B, que role não pode ser escalado, que o barbeiro só vê/edita a própria agenda e que o banco rejeita sobreposição de horários.
@@ -132,10 +138,11 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | --- | --- | --- |
 | `get-appointment` | pública (token) | detalhes do agendamento pelo link da confirmação |
 | `cancel-appointment` | token **ou** cliente dono (`appointment_id`) | cancela respeitando `cancel_min_notice_hours`; avisa o barbeiro por push |
-| `push` | barbeiro/admin | `subscribe` (salva a assinatura Web Push) e `test` |
-| `redeem-loyalty` | barbeiro (clientes que atendeu) / admin | consome os selos da regra ativa |
-| `admin-create-barber` | admin | cria login + barbeiro + expediente padrão |
-| `admin-set-password` | admin | define uma nova senha (não há "esqueci a senha" por e-mail) |
+| `push` | barbeiro/admin/super_admin | `subscribe` (salva a assinatura Web Push) e `test` |
+| `redeem-loyalty` | barbeiro (clientes que atendeu) / admin / super_admin | consome os selos da regra ativa |
+| `admin-create-barber` | admin / super_admin | cria login + barbeiro + expediente padrão; `role: "admin"` (dono) só o super_admin |
+| `admin-set-password` | admin / super_admin | define uma nova senha (não há "esqueci a senha" por e-mail); senha de dono/super admin só o super_admin troca |
+| `super-set-role` | super_admin | alterna uma conta da equipe entre barbeiro e dono |
 
 Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Push real usa `npm:web-push` com as chaves VAPID dos secrets.
 
@@ -147,17 +154,20 @@ Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Pus
 | `/agendamento/:token` | ver, cancelar, pôr na agenda (.ics), compartilhar |
 | `/entrar`, `/cadastro` | auth (senha esquecida: o admin troca no cadastro do barbeiro) |
 | `/minha-conta` | cartão fidelidade, próximos horários, histórico, dados |
-| `/barbeiro` | agenda do dia, atendido/faltou/cancelar, resgate de prêmio, ativar push |
-| `/admin` | agenda geral, serviços, barbeiros (serviços, expediente, folgas), fidelidade, ajustes |
+| `/app/` (PWA) | agenda do dia, atendido/faltou/cancelar, resgate de prêmio, ativar push. Dono escolhe ver a própria agenda ou a de qualquer barbeiro |
+| `/app/gestao` (PWA, dono) | barbeiros (serviços, expediente, folgas, "eu também atendo"), serviços, fidelidade, ajustes |
+| `/app/entrar`, `/app/conta` | login e conta dentro do app (sem sair do escopo do PWA) |
+| `/admin` (web, super admin) | agenda geral, contas (donos/barbeiros, papel e senha), barbeiros, serviços, fidelidade, ajustes |
 
-PWA: `src/sw.ts` (injectManifest) faz precache e recebe os pushes. No iPhone, push só funciona com o app adicionado à Tela de Início.
+PWA: o manifest tem `scope`/`start_url` em `/app/`, e `src/lib/pwaScope.ts` só deixa o `<link rel="manifest">` (e as metas do iOS) na página quando a rota está em `/app/`. Assim o navegador só oferece instalar o app da equipe; o agendamento e o `/admin` continuam sendo sites comuns. `src/sw.ts` (injectManifest) faz precache e recebe os pushes. No iPhone, push só funciona com o app adicionado à Tela de Início.
 
-### Primeiro admin (produção)
+### Primeiro super admin (produção)
 
 Crie a conta pelo `/cadastro` e promova pelo SQL Editor:
 ```sql
-update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'SEU_EMAIL');
+update public.profiles set role = 'super_admin' where id = (select id from auth.users where email = 'SEU_EMAIL');
 ```
+Depois, cadastre o dono em `/admin` → Contas → "Novo dono".
 
 ## Decisões registradas
 

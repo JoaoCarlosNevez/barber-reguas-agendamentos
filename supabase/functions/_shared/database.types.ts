@@ -316,7 +316,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","user_role": "customer"|"barber"|"admin"
+            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","user_role": "customer"|"barber"|"admin"|"super_admin"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -432,7 +432,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"user_role": ["customer", "barber", "admin"]
+            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"user_role": ["customer", "barber", "admin", "super_admin"]
           }
         }
 } as const

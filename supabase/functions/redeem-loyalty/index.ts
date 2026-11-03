@@ -12,7 +12,7 @@ const bodySchema = z.object({ customer_id: z.uuid() })
 
 serve(FN, async (req) => {
   const body = await readJson(req, bodySchema)
-  const user = await requireUser(req, ['barber', 'admin'])
+  const user = await requireUser(req, ['barber', 'admin', 'super_admin'])
   const db = adminClient()
 
   if (user.role === 'barber') {

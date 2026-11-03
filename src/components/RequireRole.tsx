@@ -4,13 +4,22 @@ import { homeForRole, type Role, useAuth } from '@/lib/auth'
 import { Spinner } from './states'
 
 /** Protege uma rota: exige login e (opcionalmente) um dos papéis. */
-export function RequireRole({ roles, children }: { roles?: readonly Role[]; children: ReactNode }) {
+export function RequireRole({
+  roles,
+  loginPath = '/entrar',
+  children,
+}: {
+  roles?: readonly Role[]
+  /** Tela de login usada quando não há sessão (o app PWA tem a sua, dentro do escopo). */
+  loginPath?: string
+  children: ReactNode
+}) {
   const { ready, session, role, profileLoading } = useAuth()
   const location = useLocation()
 
   if (!ready || profileLoading) return <Spinner />
   if (!session) {
-    return <Navigate to={`/entrar?next=${encodeURIComponent(location.pathname)}`} replace />
+    return <Navigate to={`${loginPath}?next=${encodeURIComponent(location.pathname)}`} replace />
   }
   if (roles && (!role || !roles.includes(role))) {
     return (

@@ -44,7 +44,7 @@ self.addEventListener('push', (event) => {
       icon: '/pwa-192.png',
       badge: '/pwa-192.png',
       tag: data.tag,
-      data: { url: data.url ?? '/barbeiro' },
+      data: { url: data.url ?? '/app/' },
     }),
   )
 })

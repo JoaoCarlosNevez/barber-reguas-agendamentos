@@ -1,7 +1,8 @@
-// POST /functions/v1/admin-create-barber  (admin)
-// { name, email, password, service_ids? }
-// Cria o usuário com role "barber" (app_metadata, só a service role define),
-// a linha em barbers e um expediente padrão (seg–sex 9–19, almoço 12–13; sáb 9–14).
+// POST /functions/v1/admin-create-barber  (admin / super_admin)
+// { name, email, password, service_ids?, role? }
+// Cria o usuário (role em app_metadata, só a service role define), a linha em
+// barbers e um expediente padrão (seg–sex 9–19, almoço 12–13; sáb 9–14).
+// role "admin" (dono da barbearia, que também atende) só o super_admin cria.
 import { z } from '../_shared/deps.ts'
 import { AppError, json, readJson, serve } from '../_shared/http.ts'
 import { log } from '../_shared/log.ts'
@@ -14,18 +15,22 @@ const bodySchema = z.object({
   email: z.email('E-mail inválido.').max(200),
   password: z.string().min(8, 'Senha com pelo menos 8 caracteres.').max(72),
   service_ids: z.array(z.uuid()).max(50).default([]),
+  role: z.enum(['barber', 'admin']).default('barber'),
 })
 
 serve(FN, async (req) => {
   const body = await readJson(req, bodySchema)
-  await requireUser(req, ['admin'])
+  const caller = await requireUser(req, ['admin', 'super_admin'])
+  if (body.role === 'admin' && caller.role !== 'super_admin') {
+    throw new AppError(403, 'forbidden', 'Só o super admin cadastra donos.')
+  }
   const db = adminClient()
 
   const { data: created, error: authErr } = await db.auth.admin.createUser({
     email: body.email,
     password: body.password,
     email_confirm: true,
-    app_metadata: { role: 'barber' },
+    app_metadata: { role: body.role },
     user_metadata: { name: body.name },
   })
   if (authErr || !created.user) {
@@ -40,7 +45,7 @@ serve(FN, async (req) => {
 
   // O GoTrue grava app_metadata depois do INSERT em auth.users, então o trigger
   // de signup ainda vê o usuário como "customer". Define o role explicitamente.
-  const { error: roleErr } = await db.from('profiles').update({ role: 'barber' }).eq('id', userId)
+  const { error: roleErr } = await db.from('profiles').update({ role: body.role }).eq('id', userId)
   if (roleErr) {
     await db.auth.admin.deleteUser(userId)
     log.error(FN, 'set_role_failed', { code: roleErr.code })
