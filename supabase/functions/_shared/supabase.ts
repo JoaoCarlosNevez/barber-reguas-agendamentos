@@ -25,13 +25,34 @@ function bearer(req: Request): string | null {
 }
 
 /**
+ * A chave pública do projeto (visitante), em qualquer formato: a anon key
+ * legada (JWT com role "anon") ou a publishable key nova (sb_publishable_...).
+ * Não compara com uma variável de ambiente porque a Supabase pode expor ali
+ * outro formato/rotação da chave que o front usa. Ler o claim sem validar a
+ * assinatura é seguro aqui: no pior caso a chamada vira visitante (sem
+ * privilégio nenhum); sessões de verdade continuam validadas pelo Auth.
+ */
+function isPublicKey(token: string): boolean {
+  if (token.startsWith('sb_publishable_')) return true
+  if (token === Deno.env.get('SUPABASE_ANON_KEY')) return true
+  const payload = token.split('.')[1]
+  if (!payload) return false
+  try {
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { role?: unknown }
+    return json.role === 'anon'
+  } catch {
+    return false
+  }
+}
+
+/**
  * Cliente logado (sessão do Supabase Auth) ou null para visitante.
  * Quem valida a sessão é o próprio Supabase Auth (auth.getUser); a function
  * não decodifica nem gera token nenhum. Visitante manda só a anon key.
  */
 export async function optionalUser(req: Request): Promise<{ id: string } | null> {
   const token = bearer(req)
-  if (!token || token === Deno.env.get('SUPABASE_ANON_KEY')) return null
+  if (!token || isPublicKey(token)) return null
   const { data, error } = await adminClient().auth.getUser(token)
   if (error || !data.user) throw new AppError(401, 'unauthorized', 'Sessão expirada. Entre novamente.')
   return { id: data.user.id }
