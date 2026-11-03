@@ -74,7 +74,7 @@ function DateNav({ date, today, onChange }: { date: string; today: string; onCha
       <div className="text-center">
         <p className="font-semibold first-letter:uppercase">{longDay.format(calendarDate(date))}</p>
         {date !== today ? (
-          <button type="button" className="text-xs text-accent underline" onClick={() => onChange(today)}>
+          <button type="button" className="text-xs text-blue underline" onClick={() => onChange(today)}>
             voltar para hoje
           </button>
         ) : (
@@ -222,11 +222,11 @@ export function DayAgenda({
                       ) : null}
                       {c ? (
                         <p className="mt-1 flex flex-wrap gap-3 text-sm">
-                          <a className="text-accent underline underline-offset-2" href={`tel:${c.phone}`}>
+                          <a className="text-blue underline underline-offset-2" href={`tel:${c.phone}`}>
                             {formatBrPhone(c.phone)}
                           </a>
                           <a
-                            className="text-accent underline underline-offset-2"
+                            className="text-blue underline underline-offset-2"
                             href={`https://wa.me/${c.phone.replace('+', '')}`}
                             target="_blank"
                             rel="noreferrer"

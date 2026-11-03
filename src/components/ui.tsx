@@ -101,7 +101,7 @@ export const Select = forwardRef<
 })
 
 const badgeTones = {
-  scheduled: 'bg-accent/15 text-accent',
+  scheduled: 'bg-blue/15 text-blue',
   completed: 'bg-success/15 text-success',
   cancelled: 'bg-danger/15 text-danger',
   no_show: 'bg-muted/15 text-muted',
@@ -127,7 +127,7 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 export function Notice({ tone = 'info', children }: { tone?: 'info' | 'success' | 'error'; children: ReactNode }) {
   const tones = {
-    info: 'border-line bg-surface-2 text-cream',
+    info: 'border-blue/40 bg-blue/10 text-cream',
     success: 'border-success/40 bg-success/10 text-cream',
     error: 'border-danger/40 bg-danger/10 text-cream',
   }

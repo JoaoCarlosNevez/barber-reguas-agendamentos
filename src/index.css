@@ -5,17 +5,21 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
 
-  --color-ink: #0b0b0b;
-  --color-surface: #151515;
-  --color-surface-2: #1e1e1e;
-  --color-line: #2d2d2d;
-  --color-cream: #f4f1ea;
-  --color-muted: #9b968d;
-  --color-accent: #ef3340;
-  --color-accent-strong: #ff4d59;
+  /* carvão levemente frio, para casar com o azul */
+  --color-ink: #0c0d10;
+  --color-surface: #15171c;
+  --color-surface-2: #1d2027;
+  --color-line: #2c3039;
+  --color-cream: #f2efe8;
+  --color-muted: #9a9ca3;
+  /* vermelho e azul de poste de barbearia, menos saturados */
+  --color-accent: #d0454c;
+  --color-accent-strong: #db5a60;
   --color-on-accent: #ffffff;
-  --color-danger: #ff6b5b;
-  --color-success: #5fcf86;
+  --color-blue: #6b8fca;
+  --color-blue-deep: #34507f;
+  --color-danger: #e0705f;
+  --color-success: #6bb784;
 
   --animate-step-in: step-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
   @keyframes step-in {
@@ -54,7 +58,8 @@
       -45deg,
       var(--color-accent) 0 8px,
       var(--color-cream) 8px 16px,
-      var(--color-ink) 16px 24px
+      var(--color-blue-deep) 16px 24px,
+      var(--color-cream) 24px 32px
     );
   }
 }

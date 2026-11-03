@@ -10,7 +10,7 @@ export function RouteErrorPage() {
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
       <h1 className="text-3xl font-bold">Ops!</h1>
       <p className="mt-2 text-muted">{message}</p>
-      <Link to="/" className="mt-6 inline-block text-accent underline underline-offset-4">
+      <Link to="/" className="mt-6 inline-block text-blue underline underline-offset-4">
         Ir para o início
       </Link>
     </div>

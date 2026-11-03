@@ -25,7 +25,7 @@ export function AccountPage() {
         <div>
           <h1 className="text-4xl font-bold leading-none">Olá, {profile.name.split(' ')[0]}</h1>
           {role !== 'customer' ? (
-            <Link to={homeForRole(role)} className="mt-2 inline-block text-sm text-accent underline underline-offset-4">
+            <Link to={homeForRole(role)} className="mt-2 inline-block text-sm text-blue underline underline-offset-4">
               {role === 'super_admin' ? 'Ir para o painel super admin →' : 'Abrir o app da equipe →'}
             </Link>
           ) : null}
@@ -119,7 +119,7 @@ function CustomerSections() {
       <section>
         <SectionTitle
           action={
-            <Link to="/" className="text-sm text-accent underline underline-offset-4">
+            <Link to="/" className="text-sm text-blue underline underline-offset-4">
               + Novo horário
             </Link>
           }
@@ -133,7 +133,7 @@ function CustomerSections() {
         ) : null}
         {upcoming.length === 0 ? (
           <EmptyState title="Nada marcado">
-            <Link to="/" className="text-accent underline underline-offset-4">
+            <Link to="/" className="text-blue underline underline-offset-4">
               Agende seu próximo corte
             </Link>
           </EmptyState>
@@ -146,7 +146,7 @@ function CustomerSections() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold first-letter:uppercase">{formatLongDate(a.starts_at)}</p>
-                      <p className="font-display text-3xl font-bold text-accent">{formatTime(a.starts_at)}</p>
+                      <p className="font-display text-3xl font-bold text-blue">{formatTime(a.starts_at)}</p>
                       <p className="text-sm text-muted">
                         {a.appointment_services.map((s) => s.service_name).join(' + ')}
                         {a.barber ? ` · ${a.barber.display_name}` : ''}

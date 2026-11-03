@@ -279,7 +279,7 @@ function BookingFlow({ catalog }: { catalog: Catalog }) {
       </div>
 
       <section key={step} aria-labelledby="quiz-q" className="animate-step-in pt-8">
-        <p className="font-display text-sm font-semibold tracking-[0.2em] text-accent uppercase">
+        <p className="font-display text-sm font-semibold tracking-[0.2em] text-blue uppercase">
           Pergunta {stepIndex + 1}
         </p>
         <h1 id="quiz-q" ref={headingRef} tabIndex={-1} className="mt-1 text-4xl font-bold leading-[0.95] outline-none">

@@ -61,7 +61,7 @@ export function AppointmentPage() {
         <ErrorState
           message={errorMessage(query.error)}
           action={
-            <Link to="/" className="text-accent underline underline-offset-4">
+            <Link to="/" className="text-blue underline underline-offset-4">
               Fazer um novo agendamento
             </Link>
           }
@@ -117,7 +117,7 @@ export function AppointmentPage() {
       <Card>
         <p className="text-sm text-muted">Olá, {a.customer_name.split(' ')[0]}</p>
         <p className="mt-2 font-semibold first-letter:uppercase">{formatLongDate(a.starts_at)}</p>
-        <p className={`font-display text-5xl font-bold ${scheduled ? 'text-accent' : 'text-muted line-through'}`}>
+        <p className={`font-display text-5xl font-bold ${scheduled ? 'text-blue' : 'text-muted line-through'}`}>
           {formatTime(a.starts_at)}
         </p>
         <p className="mt-1 text-sm text-muted">
@@ -203,7 +203,7 @@ export function AppointmentPage() {
         <Notice>
           Este horário foi cancelado
           {a.cancelled_by === 'customer' ? ' por você' : a.cancelled_by ? ' pela barbearia' : ''}.{' '}
-          <Link to="/" className="text-accent underline underline-offset-4">
+          <Link to="/" className="text-blue underline underline-offset-4">
             Agendar outro
           </Link>
         </Notice>
