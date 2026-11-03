@@ -7,7 +7,7 @@ import { loadAppointment } from '../_shared/appointment.ts'
 import { z } from '../_shared/deps.ts'
 import { AppError, json, readJson, serve } from '../_shared/http.ts'
 import { log } from '../_shared/log.ts'
-import { notifyBarber } from '../_shared/notify.ts'
+import { notifyBarberInBackground } from '../_shared/notify.ts'
 import { checkCustomerCancel } from '../_shared/policy.ts'
 import { appointmentTokenSchema } from '../_shared/schemas.ts'
 import { clientIp, enforceRateLimits, sha256Hex } from '../_shared/security.ts'
@@ -64,7 +64,7 @@ serve(FN, async (req) => {
   }
 
   log.info(FN, 'appointment_cancelled', { appointment_id: appt.id })
-  await notifyBarber(db, FN, {
+  await notifyBarberInBackground(db, FN, {
     type: 'appointment_cancelled',
     appointmentId: appt.id,
     barberId: appt.barberId,

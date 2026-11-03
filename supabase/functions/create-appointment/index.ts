@@ -1,15 +1,22 @@
 // POST /functions/v1/create-appointment  (pública; JWT de cliente opcional)
 // {
 //   barber_id: uuid | "any", service_ids: uuid[], starts_at: ISO-8601,
-//   customer: { name, phone }, website?: "" (honeypot), turnstile_token?: string
+//   customer: { name, phone }, website?: "" (honeypot), turnstile_token?: string,
+//   login?: boolean
 // }
+// login: true (visitante) entra/cria a conta do celular na mesma chamada e
+// devolve `session.token_hash` (o front troca por sessão com verifyOtp). Se o
+// nome não conferir, agenda como visitante, sem sessão.
+// A resposta já traz o agendamento completo (mesmo formato do get-appointment).
 // Preço, duração e ends_at são calculados no servidor. O token em claro é
 // devolvido UMA vez; no banco fica só o sha256.
+import { loadAppointment } from '../_shared/appointment.ts'
 import { loadAvailability, loadSettings } from '../_shared/availability.ts'
+import { type CustomerLogin, loginCustomer } from '../_shared/customerLogin.ts'
 import { z } from '../_shared/deps.ts'
 import { AppError, json, readJson, serve } from '../_shared/http.ts'
 import { log } from '../_shared/log.ts'
-import { notifyBarber } from '../_shared/notify.ts'
+import { notifyBarberInBackground } from '../_shared/notify.ts'
 import { normalizeBrPhone } from '../_shared/phone.ts'
 import { barberIdSchema, serviceIdsSchema } from '../_shared/schemas.ts'
 import { clientIp, enforceRateLimits, newAppointmentToken, verifyTurnstile } from '../_shared/security.ts'
@@ -29,6 +36,7 @@ const bodySchema = z.object({
   }),
   website: z.string().optional(),
   turnstile_token: z.string().max(4096).optional(),
+  login: z.boolean().optional(),
 })
 
 serve(FN, async (req) => {
@@ -55,7 +63,17 @@ serve(FN, async (req) => {
   ])
   await verifyTurnstile(body.turnstile_token, ip)
 
-  const user = await optionalUser(req)
+  let user = await optionalUser(req)
+  let login: CustomerLogin | null = null
+  if (!user && body.login) {
+    try {
+      login = await loginCustomer(db, FN, body.customer.name, phone)
+      user = { id: login.userId }
+    } catch (err) {
+      // nome não confere / celular da equipe / falha: segue como visitante
+      log.info(FN, 'login_skipped', { code: err instanceof AppError ? err.code : 'error' })
+    }
+  }
 
   // Revalida o horário com a mesma regra da listagem
   const startsAt = new Date(body.starts_at)
@@ -111,32 +129,41 @@ serve(FN, async (req) => {
       logged_in: user !== null,
     })
 
-    await notifyBarber(db, FN, {
+    await notifyBarberInBackground(db, FN, {
       type: 'appointment_created',
       appointmentId: data.appointment_id,
       barberId: barber.id,
     })
 
+    const legacy = {
+      id: data.appointment_id,
+      starts_at: new Date(data.starts_at).toISOString(),
+      ends_at: new Date(data.ends_at).toISOString(),
+      timezone: av.settings.timezone,
+      total_price_cents: data.total_price_cents,
+      barber: { id: barber.id, display_name: barber.displayName },
+      services: av.services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        duration_min: s.durationMin,
+        price_cents: s.priceCents,
+      })),
+      customer_name: data.customer_name,
+    }
+    // detalhes completos para o comprovante abrir sem buscar de novo
+    let full: Record<string, unknown> = {}
+    try {
+      full = (await loadAppointment(db, { id: data.appointment_id })).public
+    } catch {
+      log.warn(FN, 'load_created_failed', { appointment_id: data.appointment_id })
+    }
+
     return json(
       req,
       {
         token,
-        appointment: {
-          id: data.appointment_id,
-          starts_at: new Date(data.starts_at).toISOString(),
-          ends_at: new Date(data.ends_at).toISOString(),
-          timezone: av.settings.timezone,
-          total_price_cents: data.total_price_cents,
-          barber: { id: barber.id, display_name: barber.displayName },
-          services: av.services.map((s) => ({
-            id: s.id,
-            name: s.name,
-            duration_min: s.durationMin,
-            price_cents: s.priceCents,
-          })),
-          customer_name: data.customer_name,
-          loyalty_eligible: user !== null,
-        },
+        appointment: { ...full, ...legacy, loyalty_eligible: user !== null },
+        ...(login ? { session: { token_hash: login.tokenHash } } : {}),
       },
       201,
     )

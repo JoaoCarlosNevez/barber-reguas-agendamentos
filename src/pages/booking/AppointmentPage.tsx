@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
-import { ErrorState, Spinner } from '@/components/states'
+import { BookingLoader, ErrorState, Spinner } from '@/components/states'
 import { Badge, Button, Card, Notice } from '@/components/ui'
 import { callFunction, errorMessage } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -50,7 +50,10 @@ export function AppointmentPage() {
     },
   })
 
-  if (query.isPending) return <Spinner />
+  if (query.isPending) {
+    // logo após confirmar, mantém a mesma tela de espera até o comprovante carregar
+    return justCreated ? <BookingLoader almostDone /> : <Spinner />
+  }
   if (query.isError) {
     return (
       <section className="py-8">

@@ -8,7 +8,7 @@ import { loadAvailability, loadSettings } from '../_shared/availability.ts'
 import { z } from '../_shared/deps.ts'
 import { AppError, json, readJson, serve } from '../_shared/http.ts'
 import { log } from '../_shared/log.ts'
-import { notifyBarber } from '../_shared/notify.ts'
+import { notifyBarberInBackground } from '../_shared/notify.ts'
 import { normalizeBrPhone } from '../_shared/phone.ts'
 import { serviceIdsSchema } from '../_shared/schemas.ts'
 import { newAppointmentToken } from '../_shared/security.ts'
@@ -78,7 +78,7 @@ serve(FN, async (req) => {
   // avisa o barbeiro só quando foi outra pessoa (ex.: o dono) que marcou
   const { data: target } = await db.from('barbers').select('profile_id').eq('id', body.barber_id).single()
   if (target && target.profile_id !== user.id) {
-    await notifyBarber(db, FN, { type: 'appointment_created', appointmentId: data.appointment_id, barberId: body.barber_id })
+    await notifyBarberInBackground(db, FN, { type: 'appointment_created', appointmentId: data.appointment_id, barberId: body.barber_id })
   }
 
   log.info(FN, 'appointment_created', { appointment_id: data.appointment_id, barber_id: body.barber_id })

@@ -345,6 +345,44 @@ describe('customer-login (celular + nome, sem senha)', () => {
   })
 })
 
+describe('create-appointment com login na mesma chamada', () => {
+  it('visitante já sai logado e com o comprovante completo; nome errado agenda sem sessão', async () => {
+    const phone = `${PHONE_PREFIX}00401`
+    const slot = await firstSlot(futureDate(7))
+    const r = await callFn('create-appointment', {
+      barber_id: RAFAEL,
+      service_ids: [CORTE],
+      starts_at: slot,
+      customer: { name: 'Diego Novo', phone },
+      login: true,
+    })
+    expect(r.status).toBe(201)
+    createdAppointments.push(r.body.appointment.id as string)
+    expect(r.body.appointment).toMatchObject({ status: 'scheduled', can_cancel: true, loyalty_eligible: true })
+    expect(typeof r.body.appointment.cancel_deadline).toBe('string')
+
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    const { data, error } = await c.auth.verifyOtp({ token_hash: r.body.session.token_hash as string, type: 'email' })
+    expect(error).toBeNull()
+    const { data: mine } = await c.from('customers').select('id').eq('auth_user_id', data.user?.id ?? '').single()
+    const { data: appt } = await admin.from('appointments').select('customer_id').eq('id', r.body.appointment.id).single()
+    expect(appt?.customer_id).toBe(mine?.id)
+
+    const slot2 = await firstSlot(futureDate(8))
+    const wrong = await callFn('create-appointment', {
+      barber_id: RAFAEL,
+      service_ids: [CORTE],
+      starts_at: slot2,
+      customer: { name: 'Outra Pessoa', phone },
+      login: true,
+    })
+    expect(wrong.status).toBe(201)
+    createdAppointments.push(wrong.body.appointment.id as string)
+    expect(wrong.body.session).toBeUndefined()
+    expect(wrong.body.appointment.loyalty_eligible).toBe(false)
+  })
+})
+
 describe('um celular = uma conta', () => {
   it('agendar sem login com celular de uma conta entra na conta, mesmo com outro nome', async () => {
     const slot = await firstSlot(futureDate(6))

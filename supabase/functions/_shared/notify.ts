@@ -9,6 +9,21 @@ export type BarberEvent =
   | { type: 'appointment_created'; appointmentId: string; barberId: string }
   | { type: 'appointment_cancelled'; appointmentId: string; barberId: string }
 
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
+
+/**
+ * Dispara a notificação sem segurar a resposta: o push (serviço externo) pode
+ * levar segundos e o cliente não precisa esperar por ele.
+ */
+export function notifyBarberInBackground(db: AdminClient, fn: string, event: BarberEvent): Promise<void> {
+  const task = notifyBarber(db, fn, event)
+  if (typeof EdgeRuntime !== 'undefined') {
+    EdgeRuntime.waitUntil(task)
+    return Promise.resolve()
+  }
+  return task
+}
+
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 function shortWhen(instant: Date, tz: string): string {
