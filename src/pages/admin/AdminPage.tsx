@@ -1,13 +1,13 @@
 import { Link, Outlet } from 'react-router'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { ManageTabs } from './ManageTabs'
+import { AccountsAdmin } from './AccountsAdmin'
 
 /** Painel do super admin: web (desktop), fora do app instalável. */
 export function AdminLayout() {
   const { profile, signOut } = useAuth()
   return (
-    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 lg:px-8">
+    <div className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 lg:px-8">
       <header className="flex items-center justify-between gap-3 border-b border-line py-4">
         <Link to="/admin" className="flex items-center gap-2 font-display text-xl font-bold tracking-widest text-cream uppercase">
           <img src="/favicon.svg" alt="" className="size-7" />
@@ -30,11 +30,13 @@ export function AdminLayout() {
   )
 }
 
+/** Super admin: só cadastra e gerencia as contas da equipe (donos e barbeiros).
+ *  Serviços, horários, fidelidade etc. o dono gerencia pelo app (/app/gestao). */
 export function AdminPage() {
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-4xl font-bold leading-none">Administração</h1>
-      <ManageTabs layout="side" tabs={['agenda', 'contas', 'barbeiros', 'servicos', 'fidelidade', 'ajustes']} />
+      <AccountsAdmin />
     </div>
   )
 }

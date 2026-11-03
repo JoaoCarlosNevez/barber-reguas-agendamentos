@@ -8,6 +8,17 @@ import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
 import './index.css'
 
+// Quando um service worker novo assume (deploy novo), recarrega uma vez para
+// não ficar rodando a versão antiga guardada em cache.
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  let reloaded = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return
+    reloaded = true
+    window.location.reload()
+  })
+}
+
 syncPwaScope(router.state.location.pathname)
 router.subscribe((state) => syncPwaScope(state.location.pathname))
 

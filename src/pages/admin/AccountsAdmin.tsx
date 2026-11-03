@@ -10,7 +10,7 @@ import { NewBarberForm, PasswordReset } from './BarbersAdmin'
 /** Super admin: donos e barbeiros (papel e senha). */
 export function AccountsAdmin() {
   const qc = useQueryClient()
-  const [open, setOpen] = useState<string | 'new' | null>(null)
+  const [open, setOpen] = useState<string | 'new-admin' | 'new-barber' | null>(null)
 
   const staff = useQuery({
     queryKey: ['admin', 'staff'],
@@ -36,17 +36,13 @@ export function AccountsAdmin() {
 
   return (
     <section>
-      <SectionTitle
-        action={
-          open !== 'new' ? (
-            <Button size="sm" onClick={() => setOpen('new')}>
-              + Novo dono
-            </Button>
-          ) : null
-        }
-      >
-        Contas da equipe
-      </SectionTitle>
+      <SectionTitle>Equipe</SectionTitle>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button onClick={() => setOpen('new-admin')}>+ Novo dono</Button>
+        <Button variant="secondary" onClick={() => setOpen('new-barber')}>
+          + Novo barbeiro
+        </Button>
+      </div>
       <p className="mb-3 text-sm text-muted">
         O <strong className="text-cream">dono</strong> gerencia a barbearia pelo app (serviços, barbeiros, horários,
         fidelidade). O <strong className="text-cream">barbeiro</strong> só vê a própria agenda.
@@ -57,8 +53,9 @@ export function AccountsAdmin() {
         </div>
       ) : null}
       <div className="space-y-2">
-        {open === 'new' ? <NewBarberForm kind="admin" onDone={() => setOpen(null)} /> : null}
-        {staff.data.length === 0 && open !== 'new' ? (
+        {open === 'new-admin' ? <NewBarberForm kind="admin" onDone={() => setOpen(null)} /> : null}
+        {open === 'new-barber' ? <NewBarberForm onDone={() => setOpen(null)} /> : null}
+        {staff.data.length === 0 && open === null ? (
           <EmptyState title="Ninguém na equipe">Cadastre o dono da barbearia para começar.</EmptyState>
         ) : null}
         {staff.data.map((p) => {
