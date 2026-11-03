@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+
+  --color-ink: #0f0e0c;
+  --color-surface: #1a1815;
+  --color-surface-2: #24211d;
+  --color-line: #3a352e;
+  --color-cream: #f3efe6;
+  --color-muted: #a39b8c;
+  --color-brass: #c8a24a;
+  --color-brass-strong: #e0b955;
+  --color-danger: #e5654f;
+  --color-success: #6fbf73;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply min-h-dvh bg-ink font-sans text-cream antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display uppercase tracking-wide;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brass;
+  }
+}

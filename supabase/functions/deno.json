@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["no-explicit-any", "eqeqeq", "no-console"],
+      "exclude": ["no-console"]
+    },
+    "exclude": ["_shared/database.types.ts"]
+  },
+  "fmt": { "singleQuote": true, "semiColons": false, "lineWidth": 110 }
+}
