@@ -1,6 +1,6 @@
-# Barbearia · Agendamento (PWA)
+# Studio Réguas · Agendamento (PWA)
 
-App de agendamento para barbearia, em três frentes:
+App de agendamento do **Studio Réguas** (barbearia), em três frentes:
 
 - **Site (web mobile):** agendamento público e área do cliente com cartão fidelidade. Não é instalável.
 - **App da equipe (PWA em `/app/`):** dono e barbeiros. Agenda com Web Push; o dono também gerencia a barbearia por ali.
@@ -8,7 +8,35 @@ App de agendamento para barbearia, em três frentes:
 
 **Stack:** React 19 + TypeScript (Vite 8), React Router, TanStack Query, Tailwind CSS 4, react-hook-form + zod · Supabase (Postgres + Auth + RLS + Edge Functions em Deno) · vite-plugin-pwa (injectManifest).
 
-> Status: **Fases 1–6 implementadas** (banco + RLS, Edge Functions, agendamento público, conta do cliente com fidelidade, painel do barbeiro com Web Push/PWA e painel admin). Testado localmente; o projeto remoto ainda precisa do deploy das functions novas, de um admin e do catálogo.
+> Status: **em produção.** Agendamento em formato de quiz, conta do cliente com fidelidade, app da equipe (agenda, push, pagamento na conclusão, agendamento pelo balcão, fechar o dia, "chamar de volta" pelo WhatsApp), gestão do dono com faturamento e painel super admin.
+
+### O que já tem
+
+**Cliente (site)**
+- Agendamento em **quiz**, uma pergunta por tela: serviços → barbeiro ("tanto faz" = primeiro livre) → dia e horário → nome e celular. Barra de progresso, voltar pelo botão ou pelo "voltar" do celular (passo na URL `?passo=`).
+- Confirmar faz **uma chamada só** (login pelo celular + agendamento + comprovante), com tela cheia de carregamento até o comprovante abrir.
+- Comprovante com link para ver/cancelar, pôr na agenda (.ics) e compartilhar.
+- Conta sem senha (celular + nome), cartão fidelidade, próximos horários e histórico.
+
+**Barbeiro (app `/app/`)**
+- Agenda do dia com atendido (forma de pagamento obrigatória) / faltou / cancelar, resgate de prêmio, ligar ou chamar o cliente no WhatsApp.
+- Push: novo agendamento, cancelamento, "atendimento terminou, conclua" e "hora de chamar fulano de volta".
+- **+ Novo agendamento** pelo balcão (aceita horários de até 30 min atrás) com atalho para mandar a confirmação no WhatsApp.
+- **Cancelar** horário → botão **Avisar no WhatsApp** com a mensagem de cancelamento pronta (dia, hora, serviços e link para remarcar).
+- **Fechar agenda do dia**: se houver horários marcados, avisa quantos/quais e só fecha cancelando todos; depois lista os cancelados com o atalho do WhatsApp. "Reabrir agenda do dia" desfaz o bloqueio.
+- **Chamar de volta**: clientes atendidos há N dias (padrão 20) que não marcaram de novo, com WhatsApp ("Vamos agendar seu corte?") e "Dispensar".
+
+**Dono (app `/app/gestao` e agenda de qualquer barbeiro)**
+- Barbeiros (serviços, expediente, folgas), serviços, fidelidade, faturamento.
+- Ajustes: regras da agenda e **Chamar de volta** (liga/desliga, dias, horário de envio, mensagem com `{nome}`/`{dias}`/`{link}` e prévia, quais serviços contam).
+
+**Super admin (`/admin`)**: tudo do dono + contas de donos/barbeiros, papel e senha.
+
+### Identidade visual
+
+- Logo em `public/brand/`: `logo-original.png` (arquivo enviado, fora do precache), `logo-white.png`, `shield-white.png` (brasão) e `wordmark-white.png` (nome), todas brancas com fundo transparente. `src/components/Brand.tsx` monta a marca do cabeçalho.
+- Favicon e ícones do PWA (`favicon.png`, `pwa-192/512.png`, `apple-touch-icon.png`) são o brasão sobre o fundo do app.
+- Tokens em `src/index.css`: carvão levemente frio (`ink`, `surface`, `surface-2`, `line`), texto osso (`cream`), vermelho de barbearia para ações e seleção (`accent` #d0454c) e azul para links, avisos e destaques (`blue` #6b8fca, `blue-deep`). Títulos em Saira Condensed, texto em Inter. Faixa vermelho/branco/azul (`.barber-stripe`) no topo do site.
 
 ---
 
@@ -58,7 +86,9 @@ Seed também cria 4 serviços, horários seg–sex 09:00–19:00 (almoço 12–1
 
 ### Projeto remoto
 
-Projeto Supabase: `lttdrjzhtjjvqjpawtuj` (já vinculado com `supabase link`). Credenciais do CLI ficam em arquivos locais fora do git:
+**O que é automático:** push na `main` publica só o **site** (Vercel). **Migrations e Edge Functions do Supabase não são automáticas**: depois de mudar `supabase/migrations/` ou `supabase/functions/`, rode `npx supabase db push --linked` e `npm run fn:deploy`.
+
+Projeto Supabase: `lttdrjzhtjjvqjpawtuj` (já vinculado com `supabase link`; o CLI precisa estar logado na conta dona do projeto). Credenciais do CLI ficam em arquivos locais fora do git:
 
 - `.supabase-access-token` — token de acesso da conta dona do projeto
 - `.supabase-db-password` — senha do banco
@@ -88,6 +118,13 @@ Migrations em `supabase/migrations`:
    ```
 3. `..._functions_triggers` — helpers de autorização, trigger de signup, transições de status, geração de selo, `redeem_loyalty`.
 4. `..._rls_and_grants` — GRANTs mínimos por tabela/coluna + RLS em todas as tabelas.
+5. `20261102000100_booking` — `book_appointment` (reserva serializada por barbeiro) e rate limit.
+6. `20261103000100/200_super_admin_*` — papel `super_admin` e suas políticas.
+7. `20261103000300_payments_and_reminders` — pagamento na conclusão (`payment_method`, `paid_cents`), `completion_reminded_at` e o agendador pg_cron.
+8. `20261104000100_one_account_per_phone` — um celular = uma conta de cliente.
+9. `20261105000100_return_reminders` — `return_reminded_at` / `return_pending` ("chamar de volta").
+10. `20261105000200_return_reminder_settings` — `app_settings.return_reminder_*` e `services.return_reminder`.
+11. `20261105000300_barber_close_day` — barbeiro cria/remove `time_off` só na própria agenda (fechar o dia).
 
 ### Modelo de acesso
 
@@ -95,12 +132,14 @@ Migrations em `supabase/migrations`:
 | --- | --- |
 | anon | só leitura de catálogo: `services`/`barbers` ativos (colunas públicas), `barber_services`, `loyalty_rules` ativas, `app_settings`. **Sem acesso** a clientes, agendamentos, perfis etc. — fluxo público passa pelas Edge Functions. |
 | cliente | lê o próprio `profile`, `customer`, agendamentos, serviços do agendamento, selos e resgates. Edita só `name`/`phone` do profile. |
-| barbeiro | lê/atualiza (só `status`) agendamentos com o seu `barber_id`; lê clientes que já atendeu e os selos deles; lê seus horários e bloqueios. |
+| barbeiro | lê os agendamentos com o seu `barber_id` e atualiza só `status`, pagamento e `return_pending`; lê clientes que já atendeu e os selos deles; lê seus horários e cria/remove os próprios bloqueios (fechar o dia). |
 | admin (dono) | leitura total (exceto o profile do super admin); escrita no catálogo, horários, bloqueios, regras e configurações. Pode também ter cadastro de barbeiro e atender. |
 | super_admin | tudo do admin + vê todos os profiles; só ele cria/rebaixa donos e troca senha de donos (nas functions). |
 | service role | Edge Functions (criação de agendamento, cancelamento por token, push, resgate). |
 
 Testes: `npm run db:test` (44 asserções pgTAP) provam, entre outros, que anon e cliente A não leem dados do cliente B, que role não pode ser escalado, que o barbeiro só vê/edita a própria agenda e que o banco rejeita sobreposição de horários.
+
+Além disso: `npm test` (61 testes unitários: horários, fuso, telefone, regras do front) e `npm run test:integration` (30 testes HTTP contra o Supabase local: anti-overbooking, agendar com login na mesma chamada, horários passados para a equipe, lembretes de conclusão e de retorno, fechar o dia, permissões).
 
 ---
 
@@ -113,9 +152,9 @@ Todas: só `POST`, CORS restrito a `APP_ORIGINS` (origem fora da lista recebe 40
 ### `get-availability` (pública)
 
 ```json
-{ "barber_id": "uuid | any", "service_ids": ["uuid"], "date": "2026-11-10" }
+{ "barber_id": "uuid | any", "service_ids": ["uuid"], "date": "2026-11-10", "staff": false }
 ```
-Resposta: `duration_min`, `total_price_cents`, `services`, `barbers` e `slots: [{ starts_at (UTC), time ("HH:MM" local), barber_ids }]`. Considera expediente, intervalo, bloqueios, agendamentos, duração somada, antecedência mínima, janela máxima e passo da grade (`app_settings`).
+`staff: true` (só o formulário do app manda) + sessão da equipe inclui horários que começaram há até 30 min; o site público nunca manda, mesmo com o dono logado, porque `create-appointment` não aceita horário passado. Resposta: `duration_min`, `total_price_cents`, `services`, `barbers` e `slots: [{ starts_at (UTC), time ("HH:MM" local), barber_ids }]`. Considera expediente, intervalo, bloqueios, agendamentos, duração somada, antecedência mínima, janela máxima e passo da grade (`app_settings`).
 
 ### `create-appointment` (pública, JWT de cliente opcional)
 
@@ -123,10 +162,12 @@ Resposta: `duration_min`, `total_price_cents`, `services`, `barbers` e `slots: [
 {
   "barber_id": "uuid | any", "service_ids": ["uuid"], "starts_at": "2026-11-10T18:00:00.000Z",
   "customer": { "name": "João", "phone": "(11) 98765-4321" },
-  "website": "", "turnstile_token": "opcional"
+  "website": "", "turnstile_token": "opcional", "login": true
 }
 ```
-Fluxo: honeypot → telefone para E.164 → rate limit (IP: 10/10 min; telefone: 5/h) → Turnstile (se `TURNSTILE_SECRET_KEY` existir) → sessão do Supabase Auth, se houver → revalida o horário com a mesma regra da listagem → `book_appointment` (transação: customer, agendamento, snapshot dos serviços) → push ao barbeiro → `201` com o **token em claro (única vez)**. Horário tomado: `409 slot_unavailable` ("Esse horário não está mais disponível").
+Fluxo: honeypot → telefone para E.164 → rate limit (IP: 10/10 min; telefone: 5/h) → Turnstile (se `TURNSTILE_SECRET_KEY` existir) → sessão do Supabase Auth, se houver → revalida o horário com a mesma regra da listagem → `book_appointment` (transação: customer, agendamento, snapshot dos serviços) → push ao barbeiro em segundo plano (`EdgeRuntime.waitUntil`) → `201` com o **token em claro (única vez)** e o agendamento completo (mesmo formato do `get-appointment`, para o comprovante abrir sem nova busca).
+
+`login: true` (visitante): entra ou cria a conta do celular na mesma chamada (mesma regra do `customer-login`) e devolve `session.token_hash`, que o front troca por sessão com `verifyOtp` sem segurar a navegação. Se o nome não conferir, agenda como visitante, sem sessão. Horário tomado: `409 slot_unavailable` ("Esse horário não está mais disponível").
 
 Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder a corrida, tenta o próximo.
 
@@ -142,6 +183,7 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | `redeem-loyalty` | barbeiro (clientes que atendeu) / admin / super_admin | consome os selos da regra ativa |
 | `admin-create-barber` | admin / super_admin | cria login + barbeiro + expediente padrão; `role: "admin"` (dono) só o super_admin |
 | `completion-reminders` | pg_cron (a cada 5 min), sem auth | push ao barbeiro quando um atendimento termina e segue "agendado": abre `/app/?concluir=<id>&dia=<data>`; idempotente (`completion_reminded_at`). Também envia o lembrete de retorno: N dias depois de um atendimento concluído, sem outro horário marcado, push ao barbeiro com botão de WhatsApp; dias, horário de envio, mensagem e serviços que contam ficam em Gestão > Ajustes (`app_settings.return_reminder_*`, `services.return_reminder`); aparece em "Chamar de volta" no app até mandar/dispensar (`return_reminded_at`, `return_pending`) |
+| `staff-create-appointment` | barbeiro (própria agenda) / dono / super admin | agendamento pelo balcão, sem anti-robô e aceitando horários de até 30 min atrás; vai para a conta do celular do cliente |
 | `customer-login` | pública | login do cliente sem senha: celular identifica a conta, o primeiro nome precisa conferir; cria a conta se não existir (adota o histórico de visitante desse celular) e devolve um `token_hash` que o front troca por sessão com `verifyOtp` |
 | `admin-set-password` | admin / super_admin | define uma nova senha (não há "esqueci a senha" por e-mail); senha de dono/super admin só o super_admin troca |
 | `super-set-role` | super_admin | alterna uma conta da equipe entre barbeiro e dono |
@@ -152,12 +194,12 @@ Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Pus
 
 | Rota | Quem |
 | --- | --- |
-| `/` | agendamento (serviços → barbeiro → dia/horário → dados) |
+| `/` | agendamento em quiz (`?passo=barbeiro|quando|dados`): serviços → barbeiro → dia/horário → dados |
 | `/agendamento/:token` | ver, cancelar, pôr na agenda (.ics), compartilhar |
 | `/entrar` | cliente entra com **celular + nome**, sem senha (primeira vez cria a conta) |
 | `/entrar/equipe` | dono/barbeiros/super admin com e-mail e senha (senha esquecida: o dono ou o super admin troca) |
 | `/minha-conta` | cartão fidelidade, próximos horários, histórico, dados |
-| `/app/` (PWA) | agenda do dia, atendido/faltou/cancelar, resgate de prêmio, ativar push. Dono escolhe ver a própria agenda ou a de qualquer barbeiro |
+| `/app/` (PWA) | agenda do dia, atendido/faltou/cancelar (+ aviso no WhatsApp), fechar/reabrir o dia, novo agendamento, "Chamar de volta", resgate de prêmio, ativar push. Dono escolhe ver a própria agenda ou a de qualquer barbeiro. `?concluir=<id>&dia=<data>` e `?retorno=<id>` vêm dos pushes |
 | `/app/gestao` (PWA, dono) | barbeiros (serviços, expediente, folgas, "eu também atendo"), serviços, fidelidade, ajustes |
 | `/app/entrar`, `/app/conta` | login e conta dentro do app (sem sair do escopo do PWA) |
 | `/admin` (web, super admin) | agenda geral, contas (donos/barbeiros, papel e senha), barbeiros, serviços, fidelidade, ajustes |
@@ -203,7 +245,12 @@ Escolhas feitas onde a especificação deixava margem (padrão mais simples/segu
 14. **Preço, duração e `ends_at` calculados no banco** (`book_appointment` relê `services` e confere `barber_services`); o cliente manda só ids e horário de início.
 15. **Rate limit em tabela Postgres** (`private.rate_limits`, janela fixa, chaves com hash salgado de IP/telefone). Se a checagem falhar por erro de banco, a requisição segue (fail-open) e o erro fica no log, para o agendamento não cair junto. O IP vem de `cf-connecting-ip`/`x-forwarded-for`; por isso também há limite por telefone.
 16. **Honeypot preenchido devolve 400 `bot_detected`** (sem sucesso falso), para simplificar.
-17. **Push ao barbeiro:** `notifyBarber` envia Web Push (VAPID) em novo agendamento e cancelamento pelo cliente. Falha de push nunca derruba o fluxo; assinaturas expiradas (404/410) são apagadas.
+17. **Push ao barbeiro:** `notifyBarberInBackground` envia Web Push (VAPID) em novo agendamento e cancelamento, depois de responder (`EdgeRuntime.waitUntil`), para o cliente não esperar o serviço de push. Falha de push nunca derruba o fluxo; assinaturas expiradas (404/410) são apagadas. Pushes podem ter botões (`actions`), abertos direto pelo service worker (ex.: "Chamar no WhatsApp"; no iPhone só o toque principal).
 18. **Edge Functions públicas com `verify_jwt = false`**: visitante não tem sessão. Quando o app manda a sessão de um cliente logado, quem valida é o Supabase Auth (`auth.getUser`).
 19. **Barbeiro criado pela API tem o role gravado pela function.** O GoTrue grava `app_metadata` depois do INSERT em `auth.users`, então o trigger de signup não enxerga o role; `admin-create-barber` atualiza `profiles.role` com a service role.
 20. **Cancelamento pelo cliente só via Edge Function** (token ou sessão + dono), para aplicar a antecedência mínima no servidor.
+21. **Agendar em uma chamada:** login do cliente, reserva e dados do comprovante saem do `create-appointment`; antes eram 4 idas e voltas (login, sessão, reserva, busca do comprovante).
+22. **Janela "agora" da equipe só com `staff: true`:** decidir só pela sessão fazia o dono logado ver no site horários passados que o `create-appointment` recusava.
+23. **Chamar de volta:** roda junto do `completion-reminders` (sem job novo de pg_cron), só no horário configurado, uma vez por atendimento. Não avisa se o cliente tem outro horário (marcado ou concluído) depois desse atendimento, nem atendimentos mais velhos que os dias configurados + 25 (evita enxurrada de avisos antigos no primeiro uso).
+24. **Fechar o dia cancela todos os horários do dia:** primeiro grava o bloqueio (ninguém marca enquanto cancela), depois cancela um a um. Pelo app só se reabre o bloqueio criado ali (exatamente aquele dia); folgas de vários dias ficam na Gestão.
+25. **Mensagens de WhatsApp montadas no front** (`wa.me` com texto pronto) a partir do `window.location.origin`; no push, o servidor usa a primeira origem `https` de `APP_ORIGINS`.
