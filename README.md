@@ -141,6 +141,7 @@ Com "qualquer disponível", escolhe o barbeiro menos ocupado no dia e, se perder
 | `push` | barbeiro/admin/super_admin | `subscribe` (salva a assinatura Web Push) e `test` |
 | `redeem-loyalty` | barbeiro (clientes que atendeu) / admin / super_admin | consome os selos da regra ativa |
 | `admin-create-barber` | admin / super_admin | cria login + barbeiro + expediente padrão; `role: "admin"` (dono) só o super_admin |
+| `customer-login` | pública | login do cliente sem senha: celular identifica a conta, o primeiro nome precisa conferir; cria a conta se não existir (adota o histórico de visitante desse celular) e devolve um `token_hash` que o front troca por sessão com `verifyOtp` |
 | `admin-set-password` | admin / super_admin | define uma nova senha (não há "esqueci a senha" por e-mail); senha de dono/super admin só o super_admin troca |
 | `super-set-role` | super_admin | alterna uma conta da equipe entre barbeiro e dono |
 
@@ -152,7 +153,8 @@ Barbeiro/admin mudam status direto na tabela (RLS + trigger de transição). Pus
 | --- | --- |
 | `/` | agendamento (serviços → barbeiro → dia/horário → dados) |
 | `/agendamento/:token` | ver, cancelar, pôr na agenda (.ics), compartilhar |
-| `/entrar`, `/cadastro` | auth (senha esquecida: o admin troca no cadastro do barbeiro) |
+| `/entrar` | cliente entra com **celular + nome**, sem senha (primeira vez cria a conta) |
+| `/entrar/equipe` | dono/barbeiros/super admin com e-mail e senha (senha esquecida: o dono ou o super admin troca) |
 | `/minha-conta` | cartão fidelidade, próximos horários, histórico, dados |
 | `/app/` (PWA) | agenda do dia, atendido/faltou/cancelar, resgate de prêmio, ativar push. Dono escolhe ver a própria agenda ou a de qualquer barbeiro |
 | `/app/gestao` (PWA, dono) | barbeiros (serviços, expediente, folgas, "eu também atendo"), serviços, fidelidade, ajustes |
@@ -170,6 +172,8 @@ update public.profiles set role = 'super_admin' where id = (select id from auth.
 Depois, cadastre o dono em `/admin` → Contas → "Novo dono".
 
 ## Decisões registradas
+
+0. **Login do cliente por celular + nome, sem senha** (decisão de produto). Nome não é segredo: quem souber o celular e o primeiro nome de alguém entra na conta dessa pessoa. Risco aceito para não ter senha nem "esqueci a senha". Mitigações: rate limit por IP e por celular, resgate de fidelidade só pelo barbeiro presencialmente. Ao agendar sem login, o site já entra com o nome + celular do formulário (se o nome não conferir, agenda como visitante).
 
 Escolhas feitas onde a especificação deixava margem (padrão mais simples/seguro):
 

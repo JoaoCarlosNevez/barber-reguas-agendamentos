@@ -444,3 +444,6 @@ verify_jwt = false
 
 [functions.super-set-role]
 verify_jwt = false
+
+[functions.customer-login]
+verify_jwt = false

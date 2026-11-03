@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNow } from '@/hooks/useNow'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { ErrorState, Spinner } from '@/components/states'
 import { Button, Card, Input, Notice } from '@/components/ui'
@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth'
 import { type Catalog, useCatalog } from '@/lib/catalog'
 import { APP_TIMEZONE } from '@/lib/env'
 import { dayChipParts, formatDuration, formatLongDate, formatPrice } from '@/lib/format'
+import { signInCustomer } from '@/lib/customerAuth'
 import { maskBrPhone } from '@/lib/phoneMask'
 import { addDays, dateInTz, formatBrPhone, normalizeBrPhone } from '@/lib/shared'
 
@@ -142,14 +143,25 @@ function BookingFlow({ catalog }: { catalog: Catalog }) {
   }, [profile, reset, getValues])
 
   const book = useMutation({
-    mutationFn: (d: Details) =>
-      callFunction<CreatedAppointment>('create-appointment', {
+    mutationFn: async (d: Details) => {
+      // Sem login: entra (ou cria a conta) com o mesmo nome + celular, para o
+      // agendamento contar na fidelidade. Se o nome não conferir com a conta
+      // desse celular, agenda mesmo assim, como visitante.
+      if (!session && !d.website) {
+        try {
+          await signInCustomer(d.name, d.phone)
+        } catch {
+          // segue como visitante
+        }
+      }
+      return callFunction<CreatedAppointment>('create-appointment', {
         barber_id: barberId,
         service_ids: sortedIds,
         starts_at: slot,
         customer: { name: d.name, phone: d.phone },
         website: d.website ?? '',
-      }),
+      })
+    },
     onSuccess: (res) => {
       saveLocalAppointment({
         token: res.token,
@@ -192,10 +204,7 @@ function BookingFlow({ catalog }: { catalog: Catalog }) {
           {!session ? (
             <>
               {' '}
-              <Link to="/entrar" className="text-brass underline underline-offset-4">
-                Entre
-              </Link>{' '}
-              para juntar selos de fidelidade.
+              Seus agendamentos e selos de fidelidade ficam salvos pelo seu celular, sem senha.
             </>
           ) : null}
         </p>

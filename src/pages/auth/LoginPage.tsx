@@ -8,6 +8,7 @@ import { errorMessage } from '@/lib/api'
 import { homeForRole, useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { AuthShell } from './AuthShell'
+import { safeNext } from './safeNext'
 
 const schema = z.object({
   email: z.email('E-mail inválido.'),
@@ -15,11 +16,10 @@ const schema = z.object({
 })
 type Values = z.infer<typeof schema>
 
-/** Só aceita caminhos internos (evita open redirect). */
-function safeNext(next: string | null): string | null {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : null
-}
-
+/**
+ * Login da equipe (dono, barbeiros, super admin) com e-mail e senha.
+ * `app`: dentro do app PWA (/app/entrar); `site`: na web (/entrar/equipe).
+ */
 export function LoginPage({ variant = 'site' }: { variant?: 'site' | 'app' }) {
   const isApp = variant === 'app'
   const navigate = useNavigate()
@@ -44,17 +44,17 @@ export function LoginPage({ variant = 'site' }: { variant?: 'site' | 'app' }) {
 
   return (
     <AuthShell
-      title={isApp ? 'Entrar na equipe' : 'Entrar'}
+      title={isApp ? 'Entrar na equipe' : 'Entrar · equipe'}
       subtitle={
         isApp ? (
-          'Use o e-mail e a senha que o dono da barbearia cadastrou para você.'
+          'Use o e-mail e a senha que foram cadastrados para você.'
         ) : (
-        <>
-          Não tem conta?{' '}
-          <Link to="/cadastro" className="text-brass underline underline-offset-4">
-            Crie em 30 segundos
-          </Link>
-        </>
+          <>
+            Área do dono e dos barbeiros. É cliente?{' '}
+            <Link to="/entrar" className="text-brass underline underline-offset-4">
+              Entre com seu celular
+            </Link>
+          </>
         )
       }
     >
@@ -77,9 +77,7 @@ export function LoginPage({ variant = 'site' }: { variant?: 'site' | 'app' }) {
         <Button type="submit" className="w-full" size="lg" loading={login.isPending}>
           Entrar
         </Button>
-        <p className="text-center text-sm text-muted">
-          Esqueceu a senha? Fale com {isApp ? 'o dono da' : 'a'} barbearia.
-        </p>
+        <p className="text-center text-sm text-muted">Esqueceu a senha? Fale com o dono da barbearia.</p>
       </form>
     </AuthShell>
   )

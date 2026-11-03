@@ -9,7 +9,7 @@ import { AppAgendaPage } from '@/pages/app/AppAgendaPage'
 import { AppLayout } from '@/pages/app/AppLayout'
 import { AppManagePage } from '@/pages/app/AppManagePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import { SignupPage } from '@/pages/auth/SignupPage'
+import { CustomerLoginPage } from '@/pages/auth/CustomerLoginPage'
 import { AppointmentPage } from '@/pages/booking/AppointmentPage'
 import { BookingPage } from '@/pages/booking/BookingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -23,8 +23,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <BookingPage /> },
       { path: 'agendamento/:token', element: <AppointmentPage /> },
-      { path: 'entrar', element: <LoginPage /> },
-      { path: 'cadastro', element: <SignupPage /> },
+      { path: 'entrar', element: <CustomerLoginPage /> },
+      { path: 'entrar/equipe', element: <LoginPage /> },
+      { path: 'cadastro', element: <Navigate to="/entrar" replace /> },
       {
         path: 'minha-conta',
         element: (
@@ -80,7 +81,7 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: (
-          <RequireRole roles={['super_admin']}>
+          <RequireRole roles={['super_admin']} loginPath="/entrar/equipe">
             <AdminPage />
           </RequireRole>
         ),

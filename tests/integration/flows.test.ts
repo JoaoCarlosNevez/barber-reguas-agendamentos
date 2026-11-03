@@ -70,7 +70,9 @@ async function cleanup() {
   if (createdRedemptions.length) await admin.from('loyalty_redemptions').delete().in('id', createdRedemptions)
   if (createdAppointments.length) await admin.from('appointments').delete().in('id', createdAppointments)
   const { data: users } = await admin.auth.admin.listUsers()
-  for (const u of users.users.filter((x) => x.email === BARBER_EMAIL || x.email === OWNER_EMAIL)) {
+  const isTestUser = (email?: string) =>
+    email === BARBER_EMAIL || email === OWNER_EMAIL || (email ?? '').startsWith(`cliente${PHONE_PREFIX.slice(1)}`)
+  for (const u of users.users.filter((x) => isTestUser(x.email))) {
     await admin.auth.admin.deleteUser(u.id)
   }
   await admin.from('push_subscriptions').delete().like('endpoint', 'https://push.example.test/%')
@@ -276,6 +278,70 @@ describe('admin-set-password', () => {
     const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
     const login = await c.auth.signInWithPassword({ email: BARBER_EMAIL, password: 'Trocada@456' })
     expect(login.error).toBeNull()
+  })
+})
+
+describe('customer-login (celular + nome, sem senha)', () => {
+  const verify = async (tokenHash: string) => {
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    const { data, error } = await c.auth.verifyOtp({ token_hash: tokenHash, type: 'email' })
+    expect(error).toBeNull()
+    return { c, userId: data.user?.id ?? '' }
+  }
+
+  it('celular novo cria a conta; de novo entra; nome errado é recusado', async () => {
+    const phone = `${PHONE_PREFIX}00101`
+    const first = await callFn('customer-login', { name: 'Ana Teste', phone })
+    expect(first.status).toBe(200)
+    expect(first.body.created).toBe(true)
+    const { c, userId } = await verify(first.body.token_hash as string)
+
+    const { data: me } = await c.from('customers').select('name, phone, is_guest').eq('auth_user_id', userId).single()
+    expect(me).toMatchObject({ phone, is_guest: false })
+
+    const again = await callFn('customer-login', { name: 'ana', phone: phone.replace('+55', '') })
+    expect(again.status).toBe(200)
+    expect(again.body.created).toBe(false)
+    expect((await verify(again.body.token_hash as string)).userId).toBe(userId)
+
+    const wrong = await callFn('customer-login', { name: 'Bruno', phone })
+    expect(wrong.status).toBe(401)
+    expect(wrong.body.error.code).toBe('name_mismatch')
+
+    expect((await callFn('customer-login', { name: 'Ana', phone: '123' })).status).toBe(422)
+  })
+
+  it('cliente antigo (cadastro por e-mail) entra pelo celular; visitante vira conta com histórico', async () => {
+    const seeded = await callFn('customer-login', { name: 'João', phone: '(11) 98888-7777' })
+    expect(seeded.status).toBe(200)
+    expect((await verify(seeded.body.token_hash as string)).userId).toBe(CLIENTE_USER)
+
+    // agenda como visitante e depois entra com o mesmo celular
+    const phone = `${PHONE_PREFIX}00102`
+    const slot = await firstSlot(futureDate(5))
+    const booked = await callFn('create-appointment', {
+      barber_id: RAFAEL,
+      service_ids: [CORTE],
+      starts_at: slot,
+      customer: { name: 'Carla Visitante', phone },
+    })
+    expect(booked.status).toBe(201)
+
+    const login = await callFn('customer-login', { name: 'Carla', phone })
+    expect(login.body.created).toBe(true)
+    const { c, userId } = await verify(login.body.token_hash as string)
+    const { data: mine } = await c.from('customers').select('id').eq('auth_user_id', userId).single()
+    const { count } = await admin
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', mine?.id ?? '')
+    expect(count).toBe(1)
+    const { count: guests } = await admin
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('phone', phone)
+      .eq('is_guest', true)
+    expect(guests).toBe(0)
   })
 })
 

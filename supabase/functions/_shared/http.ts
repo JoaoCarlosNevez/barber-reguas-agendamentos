@@ -18,6 +18,7 @@ export type ErrorCode =
   | 'invalid_state'
   | 'insufficient_stamps'
   | 'conflict'
+  | 'name_mismatch'
   | 'push_not_configured'
   | 'internal_error'
 
