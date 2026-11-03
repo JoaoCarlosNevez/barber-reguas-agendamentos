@@ -48,7 +48,12 @@ export function StaffBookingForm({
     queryKey: ['staff-availability', barberId, sortedIds, date],
     enabled: serviceIds.length > 0 && date >= today,
     queryFn: () =>
-      callFunction<AvailabilityResponse>('get-availability', { barber_id: barberId, service_ids: sortedIds, date }),
+      callFunction<AvailabilityResponse>('get-availability', {
+        barber_id: barberId,
+        service_ids: sortedIds,
+        date,
+        staff: true,
+      }),
   })
 
   const create = useMutation({

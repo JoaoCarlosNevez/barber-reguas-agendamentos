@@ -347,7 +347,7 @@ describe('customer-login (celular + nome, sem senha)', () => {
 
 describe('create-appointment com login na mesma chamada', () => {
   it('visitante já sai logado e com o comprovante completo; nome errado agenda sem sessão', async () => {
-    const phone = `${PHONE_PREFIX}00401`
+    const phone = `${PHONE_PREFIX}00402`
     const slot = await firstSlot(futureDate(7))
     const r = await callFn('create-appointment', {
       barber_id: RAFAEL,
@@ -418,11 +418,23 @@ describe('um celular = uma conta', () => {
 })
 
 describe('staff-create-appointment (barbeiro agenda pelo app)', () => {
+  it('site público com a equipe logada não mostra horário que já passou', async () => {
+    const rafael = await tokenFor('rafael@barbearia.dev')
+    const today = dateInTz(new Date(), 'America/Sao_Paulo')
+    const q = { barber_id: RAFAEL, service_ids: [CORTE], date: today }
+    const pub = await callFn('get-availability', q)
+    const logged = await callFn('get-availability', q, rafael)
+    expect(logged.status).toBe(200)
+    expect(logged.body.slots).toEqual(pub.body.slots)
+    const now = Date.now()
+    for (const s of logged.body.slots as { starts_at: string }[]) expect(Date.parse(s.starts_at)).toBeGreaterThan(now)
+  })
+
   it('barbeiro agenda na própria agenda; não na de outro; cliente não pode', async () => {
     const rafael = await tokenFor('rafael@barbearia.dev')
     const cliente = await tokenFor('cliente@barbearia.dev')
     const date = futureDate(7)
-    const avail = await callFn('get-availability', { barber_id: RAFAEL, service_ids: [CORTE], date }, rafael)
+    const avail = await callFn('get-availability', { barber_id: RAFAEL, service_ids: [CORTE], date, staff: true }, rafael)
     expect(avail.status).toBe(200)
     const slot = avail.body.slots[0].starts_at as string
     const body = {

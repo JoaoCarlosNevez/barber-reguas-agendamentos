@@ -1,5 +1,8 @@
 // POST /functions/v1/get-availability  (pública)
-// { barber_id: uuid | "any", service_ids: uuid[], date: "YYYY-MM-DD" }
+// { barber_id: uuid | "any", service_ids: uuid[], date: "YYYY-MM-DD", staff?: boolean }
+// staff: true (só o app da equipe manda) + sessão da equipe => inclui horários
+// que começaram há pouco. O site público nunca manda, mesmo com o dono logado,
+// porque create-appointment não aceita horário passado.
 import { z } from '../_shared/deps.ts'
 import { json, readJson, serve } from '../_shared/http.ts'
 import { barberIdSchema, dateSchema, serviceIdsSchema } from '../_shared/schemas.ts'
@@ -15,6 +18,7 @@ const bodySchema = z.object({
   barber_id: barberIdSchema,
   service_ids: serviceIdsSchema,
   date: dateSchema,
+  staff: z.boolean().optional(),
 })
 
 serve(FN, async (req) => {
@@ -26,7 +30,7 @@ serve(FN, async (req) => {
   ])
 
   // equipe (agendando pelo app) vê também os horários de agora
-  const staff = await optionalStaff(req)
+  const staff = body.staff ? await optionalStaff(req) : null
   const settings = await loadSettings(db)
   const av = await loadAvailability(db, {
     barberId: body.barber_id,
