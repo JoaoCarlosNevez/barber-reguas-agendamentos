@@ -4,19 +4,18 @@ import { useNow } from '@/hooks/useNow'
 import { Button, Card } from '@/components/ui'
 import { errorMessage } from '@/lib/api'
 import { APP_TIMEZONE } from '@/lib/env'
+import { fillReturnMessage } from '@/lib/returnMessage'
 import { formatBrPhone } from '@/lib/shared'
 import { supabase } from '@/lib/supabase'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+const DEFAULT_MESSAGE =
+  'Oi, {nome}! Aqui é do Studio Réguas ✂️ Já faz {dias} dias do seu último corte. Vamos agendar seu corte? É só escolher o horário: {link}'
 const shortDate = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: APP_TIMEZONE })
 
-function returnMessage(name: string, days: number): string {
-  const first = name.trim().split(/\s+/)[0] ?? ''
-  return `Oi, ${first}! Aqui é do Studio Réguas ✂️ Já faz ${days} dias do seu último corte. Vamos agendar seu corte? É só escolher o horário: ${window.location.origin}/`
-}
 
 /**
- * "Chamar de volta": clientes cujo último corte foi há 20+ dias e que não
+ * "Chamar de volta": clientes atendidos há N+ dias (Configurações) que não
  * marcaram outro horário. Vem do lembrete de retorno (push ao barbeiro).
  * A RLS já limita: barbeiro vê os seus; dono vê todos.
  */
@@ -36,6 +35,19 @@ export function ReturnReminders({ barberId, focusId }: { barberId: string | null
         .order('starts_at')
       if (barberId) q = q.eq('barber_id', barberId)
       const { data, error } = await q
+      if (error) throw error
+      return data
+    },
+  })
+
+  const settings = useQuery({
+    queryKey: ['return-settings'],
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('return_reminder_days, return_reminder_message')
+        .single()
       if (error) throw error
       return data
     },
@@ -63,19 +75,23 @@ export function ReturnReminders({ barberId, focusId }: { barberId: string | null
         Chamar de volta
         <span className="rounded-full bg-blue/15 px-2 py-0.5 font-sans text-xs text-blue">{list.data.length}</span>
       </h2>
-      <p className="text-sm text-muted">Último corte há 20 dias ou mais e nada marcado.</p>
+      <p className="text-sm text-muted">
+        Atendidos há {settings.data?.return_reminder_days ?? 20} dias ou mais e sem nada marcado.
+      </p>
       {list.data.map((a) => {
         const name = a.customer?.name ?? 'Cliente'
         const phone = a.customer?.phone ?? ''
         const days = Math.floor((now - new Date(a.starts_at).getTime()) / DAY_MS)
-        const wa = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(returnMessage(name, days))}`
+        const wa = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+          fillReturnMessage(settings.data?.return_reminder_message ?? DEFAULT_MESSAGE, name, days, window.location.origin),
+        )}`
         const focused = a.id === focusId
         return (
           <div key={a.id} ref={focused ? focusRef : undefined}>
             <Card className={focused ? 'border-blue' : ''}>
               <p className="font-semibold">{name}</p>
               <p className="text-sm text-muted">
-                Último corte {shortDate.format(new Date(a.starts_at))} · há {days} dias
+                Atendido em {shortDate.format(new Date(a.starts_at))} · há {days} dias
                 {barberId ? '' : ` · ${a.barber?.display_name ?? ''}`}
                 {phone ? ` · ${formatBrPhone(phone)}` : ''}
               </p>

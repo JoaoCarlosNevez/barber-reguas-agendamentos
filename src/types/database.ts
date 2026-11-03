@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "app_settings": {
                   Row: {
-                    "cancel_min_notice_hours": number,"id": boolean,"max_booking_days": number,"min_booking_notice_min": number,"slot_step_min": number,"timezone": string,"updated_at": string
+                    "cancel_min_notice_hours": number,"id": boolean,"max_booking_days": number,"min_booking_notice_min": number,"return_reminder_days": number,"return_reminder_enabled": boolean,"return_reminder_from_hour": number,"return_reminder_message": string,"return_reminder_until_hour": number,"slot_step_min": number,"timezone": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_min_notice_hours"?: number,"id"?: boolean,"max_booking_days"?: number,"min_booking_notice_min"?: number,"slot_step_min"?: number,"timezone"?: string,"updated_at"?: string
+                    "cancel_min_notice_hours"?: number,"id"?: boolean,"max_booking_days"?: number,"min_booking_notice_min"?: number,"return_reminder_days"?: number,"return_reminder_enabled"?: boolean,"return_reminder_from_hour"?: number,"return_reminder_message"?: string,"return_reminder_until_hour"?: number,"slot_step_min"?: number,"timezone"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "cancel_min_notice_hours"?: number,"id"?: boolean,"max_booking_days"?: number,"min_booking_notice_min"?: number,"slot_step_min"?: number,"timezone"?: string,"updated_at"?: string
+                    "cancel_min_notice_hours"?: number,"id"?: boolean,"max_booking_days"?: number,"min_booking_notice_min"?: number,"return_reminder_days"?: number,"return_reminder_enabled"?: boolean,"return_reminder_from_hour"?: number,"return_reminder_message"?: string,"return_reminder_until_hour"?: number,"slot_step_min"?: number,"timezone"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"services": {
                   Row: {
-                    "active": boolean,"created_at": string,"duration_min": number,"id": string,"name": string,"price_cents": number
+                    "active": boolean,"created_at": string,"duration_min": number,"id": string,"name": string,"price_cents": number,"return_reminder": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"created_at"?: string,"duration_min": number,"id"?: string,"name": string,"price_cents": number
+                    "active"?: boolean,"created_at"?: string,"duration_min": number,"id"?: string,"name": string,"price_cents": number,"return_reminder"?: boolean
                   }
                   Update: {
-                    "active"?: boolean,"created_at"?: string,"duration_min"?: number,"id"?: string,"name"?: string,"price_cents"?: number
+                    "active"?: boolean,"created_at"?: string,"duration_min"?: number,"id"?: string,"name"?: string,"price_cents"?: number,"return_reminder"?: boolean
                   }
                   Relationships: [
                     

@@ -8,6 +8,7 @@ import { APP_TIMEZONE } from '@/lib/env'
 import {
   calendarDate,
   centsToInput,
+  formatLongDate,
   formatPrice,
   formatTime,
   parseBrlToCents,
@@ -21,6 +22,19 @@ import { useNow } from '@/hooks/useNow'
 
 type Status = Enums<'appointment_status'>
 type PaymentMethod = Enums<'payment_method'>
+
+/** Mensagem pronta para avisar o cliente do cancelamento no WhatsApp. */
+function cancelWhatsappUrl(a: {
+  starts_at: string
+  customer: { name: string; phone: string } | null
+  appointment_services: { service_name: string }[]
+}): string | null {
+  if (!a.customer?.phone) return null
+  const first = a.customer.name.trim().split(/\s+/)[0] ?? ''
+  const services = a.appointment_services.map((s) => s.service_name).join(' + ')
+  const text = `Oi, ${first}! Aqui é do Studio Réguas. Infelizmente precisamos cancelar seu horário de ${formatLongDate(a.starts_at)} às ${formatTime(a.starts_at)} (${services}). Desculpe o transtorno! Quer remarcar? É só escolher outro horário: ${window.location.origin}/`
+  return `https://wa.me/${a.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`
+}
 
 const longDay = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
 
@@ -111,7 +125,7 @@ export function DayAgenda({
   const [confirm, setConfirm] = useState<{ id: string; status: Status } | null>(
     focusId ? { id: focusId, status: 'completed' } : null,
   )
-  const [flash, setFlash] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [flash, setFlash] = useState<{ tone: 'success' | 'error'; text: string; whatsapp?: string } | null>(null)
 
   const setStatus = useMutation({
     mutationFn: async ({
@@ -131,8 +145,14 @@ export function DayAgenda({
     },
     onSuccess: (_d, v) => {
       setConfirm(null)
+      const appt = agenda.data?.appointments.find((x) => x.id === v.id)
+      const wa = v.status === 'cancelled' && appt ? cancelWhatsappUrl(appt) : null
       setFlash(
-        v.status === 'completed' ? { tone: 'success', text: 'Atendimento concluído. Selo de fidelidade lançado.' } : null,
+        v.status === 'completed'
+          ? { tone: 'success', text: 'Atendimento concluído. Selo de fidelidade lançado.' }
+          : wa
+            ? { tone: 'success', text: `Horário de ${appt?.customer?.name ?? 'cliente'} cancelado. Avise o cliente:`, whatsapp: wa }
+            : null,
       )
       void qc.invalidateQueries({ queryKey: ['agenda'] })
       void qc.invalidateQueries({ queryKey: ['revenue'] })
@@ -174,7 +194,21 @@ export function DayAgenda({
         </div>
       ) : null}
 
-      {flash ? <Notice tone={flash.tone}>{flash.text}</Notice> : null}
+      {flash ? (
+        <Notice tone={flash.tone}>
+          {flash.text}
+          {flash.whatsapp ? (
+            <a
+              href={flash.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 flex w-fit items-center rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent hover:bg-accent-strong"
+            >
+              Avisar no WhatsApp
+            </a>
+          ) : null}
+        </Notice>
+      ) : null}
 
       {agenda.isPending ? (
         <Spinner />
@@ -227,11 +261,17 @@ export function DayAgenda({
                           </a>
                           <a
                             className="text-blue underline underline-offset-2"
-                            href={`https://wa.me/${c.phone.replace('+', '')}`}
+                            href={
+                              a.status === 'cancelled' && a.cancelled_by !== 'customer'
+                                ? (cancelWhatsappUrl(a) ?? `https://wa.me/${c.phone.replace('+', '')}`)
+                                : `https://wa.me/${c.phone.replace('+', '')}`
+                            }
                             target="_blank"
                             rel="noreferrer"
                           >
-                            WhatsApp
+                            {a.status === 'cancelled' && a.cancelled_by !== 'customer'
+                              ? 'Avisar cancelamento no WhatsApp'
+                              : 'WhatsApp'}
                           </a>
                         </p>
                       ) : null}
@@ -255,7 +295,9 @@ export function DayAgenda({
                     ) : isConfirming && confirm.status !== 'completed' ? (
                       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
                         <span className="text-sm">
-                          {confirm.status === 'cancelled' ? 'Cancelar este horário?' : 'Marcar como falta?'}
+                          {confirm.status === 'cancelled'
+                            ? 'Cancelar este horário? Depois você pode avisar o cliente no WhatsApp.'
+                            : 'Marcar como falta?'}
                         </span>
                         <Button
                           size="sm"

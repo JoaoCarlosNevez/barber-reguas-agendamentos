@@ -21,7 +21,12 @@ serve(FN, async (req) => {
   const now = new Date()
 
   const [{ data: settings }, { data: due, error }] = await Promise.all([
-    db.from('app_settings').select('timezone').single(),
+    db
+      .from('app_settings')
+      .select(
+        'timezone, return_reminder_enabled, return_reminder_days, return_reminder_from_hour, return_reminder_until_hour, return_reminder_message',
+      )
+      .single(),
     db
       .from('appointments')
       .select('id, starts_at, customer:customers(name), barber:barbers(profile_id), appointment_services(service_name)')
@@ -61,6 +66,14 @@ serve(FN, async (req) => {
   }
 
   if (reminded) log.info(FN, 'reminders_sent', { count: reminded })
-  const ret = await sendReturnReminders(db, FN, now, tz)
+  const ret = settings
+    ? await sendReturnReminders(db, FN, now, tz, {
+        enabled: settings.return_reminder_enabled,
+        days: settings.return_reminder_days,
+        fromHour: settings.return_reminder_from_hour,
+        untilHour: settings.return_reminder_until_hour,
+        message: settings.return_reminder_message,
+      })
+    : { sent: 0, inWindow: false }
   return json(req, { reminded, return_sent: ret.sent, return_window: ret.inWindow })
 })

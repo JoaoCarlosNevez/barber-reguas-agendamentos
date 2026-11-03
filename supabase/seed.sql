@@ -59,6 +59,8 @@ insert into public.services (id, name, duration_min, price_cents) values
   ('5e000000-0000-4000-8000-000000000002', 'Barba',        30, 3500),
   ('5e000000-0000-4000-8000-000000000003', 'Sobrancelha',  15, 1500),
   ('5e000000-0000-4000-8000-000000000004', 'Pigmentação',  45, 6000);
+-- corte gera o lembrete "chamar de volta"
+update public.services set return_reminder = true where id = '5e000000-0000-4000-8000-000000000001';
 
 -- Rafael faz tudo; Lucas não faz pigmentação
 insert into public.barber_services (barber_id, service_id)

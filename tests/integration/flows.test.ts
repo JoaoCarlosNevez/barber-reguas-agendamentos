@@ -520,9 +520,22 @@ describe('lembrete de retorno (20 dias depois do corte)', () => {
     await bookPast(2, `${PHONE_PREFIX}00502`, 'Voltou Teste')
     const recente = await bookPast(10, `${PHONE_PREFIX}00503`, 'Recente Teste')
 
+    // horário de envio cobrindo o dia todo, para o teste não depender da hora
+    const { data: before } = await admin
+      .from('app_settings')
+      .select('return_reminder_enabled, return_reminder_days, return_reminder_from_hour, return_reminder_until_hour')
+      .single()
+    await admin
+      .from('app_settings')
+      .update({ return_reminder_enabled: true, return_reminder_days: 20, return_reminder_from_hour: 0, return_reminder_until_hour: 24 })
+      .eq('id', true)
+    ctx.onTestFinished(async () => {
+      if (before) await admin.from('app_settings').update(before).eq('id', true)
+    })
+
     const r = await callFn('completion-reminders', {})
     expect(r.status).toBe(200)
-    if (!r.body.return_window) ctx.skip() // fora do horário comercial: nada é enviado
+    expect(r.body.return_window).toBe(true)
 
     const rows = async (ids: string[]) =>
       (await admin.from('appointments').select('id, return_pending, return_reminded_at').in('id', ids)).data ?? []
@@ -546,6 +559,18 @@ describe('lembrete de retorno (20 dias depois do corte)', () => {
     const off = await c.from('appointments').update({ return_pending: false }).eq('id', sumido)
     expect(off.error).toBeNull()
     expect((await rows([sumido]))[0]?.return_pending).toBe(false)
+  })
+})
+
+describe('lembrete de retorno desligado', () => {
+  it('dono desliga: nada é enviado', async (ctx) => {
+    const { data: before } = await admin.from('app_settings').select('return_reminder_enabled').single()
+    await admin.from('app_settings').update({ return_reminder_enabled: false }).eq('id', true)
+    ctx.onTestFinished(async () => {
+      if (before) await admin.from('app_settings').update(before).eq('id', true)
+    })
+    const r = await callFn('completion-reminders', {})
+    expect(r.body).toMatchObject({ return_sent: 0, return_window: false })
   })
 })
 

@@ -7,6 +7,7 @@ import { ErrorState, Spinner } from '@/components/states'
 import { Button, Card, Input, Notice, SectionTitle } from '@/components/ui'
 import { errorMessage } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
+import { ReturnReminderSettings } from './ReturnReminderSettings'
 
 const int = (min: number, max: number) =>
   z.coerce.number<string | number>().int('Número inteiro.').min(min, `Mínimo ${min}.`).max(max, `Máximo ${max}.`)
@@ -52,44 +53,47 @@ export function SettingsAdmin() {
 
   const e = form.formState.errors
   return (
-    <section>
-      <SectionTitle>Regras da agenda</SectionTitle>
-      <Card>
-        <form noValidate onSubmit={form.handleSubmit((v) => save.mutate(v))} className="space-y-3">
-          <Input
-            label="Antecedência mínima para agendar (minutos)"
-            type="number"
-            hint="Ex.: 60 = só aceita horários a partir de 1h no futuro."
-            error={e.min_booking_notice_min?.message}
-            {...form.register('min_booking_notice_min')}
-          />
-          <Input
-            label="Agenda aberta até (dias à frente)"
-            type="number"
-            error={e.max_booking_days?.message}
-            {...form.register('max_booking_days')}
-          />
-          <Input
-            label="Cliente pode cancelar até (horas antes)"
-            type="number"
-            error={e.cancel_min_notice_hours?.message}
-            {...form.register('cancel_min_notice_hours')}
-          />
-          <Input
-            label="Intervalo entre horários (minutos)"
-            type="number"
-            hint="Grade de horários oferecidos: 15 = 9:00, 9:15, 9:30…"
-            error={e.slot_step_min?.message}
-            {...form.register('slot_step_min')}
-          />
-          <p className="text-xs text-muted">Fuso horário: {settings.data.timezone}</p>
-          {save.isError ? <Notice tone="error">{errorMessage(save.error)}</Notice> : null}
-          {save.isSuccess ? <Notice tone="success">Configurações salvas.</Notice> : null}
-          <Button type="submit" loading={save.isPending}>
-            Salvar
-          </Button>
-        </form>
-      </Card>
-    </section>
+    <div className="space-y-8">
+      <section>
+        <SectionTitle>Regras da agenda</SectionTitle>
+        <Card>
+          <form noValidate onSubmit={form.handleSubmit((v) => save.mutate(v))} className="space-y-3">
+            <Input
+              label="Antecedência mínima para agendar (minutos)"
+              type="number"
+              hint="Ex.: 60 = só aceita horários a partir de 1h no futuro."
+              error={e.min_booking_notice_min?.message}
+              {...form.register('min_booking_notice_min')}
+            />
+            <Input
+              label="Agenda aberta até (dias à frente)"
+              type="number"
+              error={e.max_booking_days?.message}
+              {...form.register('max_booking_days')}
+            />
+            <Input
+              label="Cliente pode cancelar até (horas antes)"
+              type="number"
+              error={e.cancel_min_notice_hours?.message}
+              {...form.register('cancel_min_notice_hours')}
+            />
+            <Input
+              label="Intervalo entre horários (minutos)"
+              type="number"
+              hint="Grade de horários oferecidos: 15 = 9:00, 9:15, 9:30…"
+              error={e.slot_step_min?.message}
+              {...form.register('slot_step_min')}
+            />
+            <p className="text-xs text-muted">Fuso horário: {settings.data.timezone}</p>
+            {save.isError ? <Notice tone="error">{errorMessage(save.error)}</Notice> : null}
+            {save.isSuccess ? <Notice tone="success">Configurações salvas.</Notice> : null}
+            <Button type="submit" loading={save.isPending}>
+              Salvar
+            </Button>
+          </form>
+        </Card>
+      </section>
+      <ReturnReminderSettings />
+    </div>
   )
 }
