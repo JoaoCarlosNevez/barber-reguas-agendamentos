@@ -345,6 +345,40 @@ describe('customer-login (celular + nome, sem senha)', () => {
   })
 })
 
+describe('um celular = uma conta', () => {
+  it('agendar sem login com celular de uma conta entra na conta, mesmo com outro nome', async () => {
+    const slot = await firstSlot(futureDate(6))
+    const r = await callFn('create-appointment', {
+      barber_id: RAFAEL,
+      service_ids: [CORTE],
+      starts_at: slot,
+      customer: { name: 'Outro Nome', phone: '(11) 98888-7777' },
+    })
+    expect(r.status).toBe(201)
+    createdAppointments.push(r.body.appointment.id as string)
+    expect(r.body.appointment.customer_name).toBe('Outro Nome') // não revela o nome da conta
+    const { data: account } = await admin.from('customers').select('id').eq('auth_user_id', CLIENTE_USER).single()
+    const { data: appt } = await admin.from('appointments').select('customer_id').eq('id', r.body.appointment.id).single()
+    expect(appt?.customer_id).toBe(account?.id)
+    const { count } = await admin
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('phone', '+5511988887777')
+      .eq('is_guest', true)
+    expect(count).toBe(0)
+  })
+
+  it('login de cliente não abre conta da equipe com o mesmo celular', async () => {
+    const phone = `${PHONE_PREFIX}00301`
+    const rafaelUser = 'b0000000-0000-4000-8000-000000000001'
+    const { error } = await admin.from('customers').insert({ auth_user_id: rafaelUser, is_guest: false, name: 'Rafael', phone })
+    expect(error).toBeNull()
+    const r = await callFn('customer-login', { name: 'Rafael', phone })
+    expect(r.status).toBe(409)
+    await admin.from('customers').delete().eq('auth_user_id', rafaelUser)
+  })
+})
+
 describe('conclusão com pagamento + lembrete', () => {
   it('lembra o barbeiro uma vez; barbeiro conclui informando o pagamento', async () => {
     // atendimento que terminou há ~1h (Corte 30 min), em horário redondo

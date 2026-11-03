@@ -45,19 +45,30 @@ serve(FN, async (req) => {
     { scope: 'phone', subject: phone, windowSeconds: 3600, max: 10 },
   ])
 
-  // Conta existente com esse celular (a mais antiga, se houver mais de uma)
-  const { data: existing, error: findErr } = await db
+  // Conta de cliente dona desse celular (a mais antiga). Contas da equipe com
+  // esse celular não contam: login de cliente nunca abre conta da equipe.
+  const { data: rows, error: findErr } = await db
     .from('customers')
     .select('id, name, auth_user_id')
     .eq('phone', phone)
     .eq('is_guest', false)
     .not('auth_user_id', 'is', null)
     .order('created_at')
-    .limit(1)
-    .maybeSingle()
   if (findErr) {
     log.error(FN, 'lookup_failed', { code: findErr.code })
     throw new AppError(500, 'internal_error', 'Não foi possível entrar agora.')
+  }
+  let existing: (typeof rows)[number] | undefined
+  if (rows.length) {
+    const { data: profiles } = await db
+      .from('profiles')
+      .select('id, role')
+      .in('id', rows.map((r) => r.auth_user_id ?? ''))
+    const customerIds = new Set((profiles ?? []).filter((p) => p.role === 'customer').map((p) => p.id))
+    existing = rows.find((r) => r.auth_user_id && customerIds.has(r.auth_user_id))
+    if (!existing) {
+      throw new AppError(409, 'conflict', 'Este celular é de alguém da equipe. Entre pela área da equipe, com e-mail e senha.')
+    }
   }
 
   let email: string
