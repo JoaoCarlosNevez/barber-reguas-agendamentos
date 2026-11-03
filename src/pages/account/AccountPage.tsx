@@ -25,7 +25,7 @@ export function AccountPage() {
         <div>
           <h1 className="text-4xl font-bold leading-none">Olá, {profile.name.split(' ')[0]}</h1>
           {role !== 'customer' ? (
-            <Link to={homeForRole(role)} className="mt-2 inline-block text-sm text-brass underline underline-offset-4">
+            <Link to={homeForRole(role)} className="mt-2 inline-block text-sm text-accent underline underline-offset-4">
               {role === 'super_admin' ? 'Ir para o painel super admin →' : 'Abrir o app da equipe →'}
             </Link>
           ) : null}
@@ -119,7 +119,7 @@ function CustomerSections() {
       <section>
         <SectionTitle
           action={
-            <Link to="/" className="text-sm text-brass underline underline-offset-4">
+            <Link to="/" className="text-sm text-accent underline underline-offset-4">
               + Novo horário
             </Link>
           }
@@ -133,7 +133,7 @@ function CustomerSections() {
         ) : null}
         {upcoming.length === 0 ? (
           <EmptyState title="Nada marcado">
-            <Link to="/" className="text-brass underline underline-offset-4">
+            <Link to="/" className="text-accent underline underline-offset-4">
               Agende seu próximo corte
             </Link>
           </EmptyState>
@@ -146,7 +146,7 @@ function CustomerSections() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold first-letter:uppercase">{formatLongDate(a.starts_at)}</p>
-                      <p className="font-display text-3xl font-bold text-brass">{formatTime(a.starts_at)}</p>
+                      <p className="font-display text-3xl font-bold text-accent">{formatTime(a.starts_at)}</p>
                       <p className="text-sm text-muted">
                         {a.appointment_services.map((s) => s.service_name).join(' + ')}
                         {a.barber ? ` · ${a.barber.display_name}` : ''}
@@ -223,7 +223,7 @@ function LoyaltyCard({
 }) {
   const ready = stamps >= required
   return (
-    <section className="rounded-2xl border border-brass/40 bg-gradient-to-br from-surface-2 to-surface p-5">
+    <section className="rounded-2xl border border-accent/40 bg-gradient-to-br from-surface-2 to-surface p-5">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xl font-semibold">Cartão fidelidade</h2>
         <span className="text-sm text-muted">
@@ -236,7 +236,7 @@ function LoyaltyCard({
             key={i}
             aria-hidden
             className={`grid aspect-square place-items-center rounded-full border-2 text-lg ${
-              i < stamps ? 'border-brass bg-brass text-ink' : 'border-dashed border-line text-line'
+              i < stamps ? 'border-accent bg-accent text-on-accent' : 'border-dashed border-line text-line'
             }`}
           >
             ✂
@@ -245,10 +245,10 @@ function LoyaltyCard({
       </div>
       <p className="mt-4 text-sm">
         {ready ? (
-          <strong className="text-brass">Você ganhou: {reward}! Peça ao barbeiro no próximo atendimento.</strong>
+          <strong className="text-accent">Você ganhou: {reward}! Peça ao barbeiro no próximo atendimento.</strong>
         ) : (
           <>
-            Faltam <strong className="text-brass">{required - stamps}</strong> para: {reward}.
+            Faltam <strong className="text-accent">{required - stamps}</strong> para: {reward}.
           </>
         )}
       </p>

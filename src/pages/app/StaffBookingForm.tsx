@@ -94,7 +94,7 @@ export function StaffBookingForm({
       timeZone: APP_TIMEZONE,
     })} às ${formatTime(create.data.starts_at)}. Detalhes e cancelamento: ${link}`
     return (
-      <Card className="border-brass/60">
+      <Card className="border-accent/60">
         <Notice tone="success">
           Agendado para {name.trim()} às {formatTime(create.data.starts_at)}.
         </Notice>
@@ -103,7 +103,7 @@ export function StaffBookingForm({
             href={`https://wa.me/${e164.replace('+', '')}?text=${encodeURIComponent(msg)}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center rounded-lg bg-brass px-3 py-2 text-sm font-semibold text-ink"
+            className="inline-flex items-center rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent"
           >
             Enviar confirmação no WhatsApp
           </a>
@@ -122,7 +122,7 @@ export function StaffBookingForm({
   const canSubmit = slot !== null && name.trim().length >= 2 && phoneOk
 
   return (
-    <Card className="space-y-4 border-brass/60">
+    <Card className="space-y-4 border-accent/60">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Novo agendamento</h2>
         <Button size="sm" variant="ghost" onClick={onClose}>
@@ -166,7 +166,7 @@ export function StaffBookingForm({
                     setServiceIds((cur) => (on ? cur.filter((x) => x !== s.id) : [...cur, s.id]))
                   }}
                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    on ? 'border-brass bg-brass/15 text-brass' : 'border-line text-muted'
+                    on ? 'border-accent bg-accent/15 text-accent' : 'border-line text-muted'
                   }`}
                 >
                   {on ? '✓ ' : ''}
@@ -213,7 +213,7 @@ export function StaffBookingForm({
                   aria-pressed={slot === s.starts_at}
                   onClick={() => setSlot(s.starts_at)}
                   className={`rounded-lg border py-2 text-sm font-semibold tabular-nums transition-colors ${
-                    slot === s.starts_at ? 'border-brass bg-brass text-ink' : 'border-line text-cream'
+                    slot === s.starts_at ? 'border-accent bg-accent text-on-accent' : 'border-line text-cream'
                   }`}
                 >
                   {s.time}

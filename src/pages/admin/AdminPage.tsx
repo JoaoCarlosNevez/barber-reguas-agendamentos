@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router'
+import { BrandMark } from '@/components/Brand'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { AccountsAdmin } from './AccountsAdmin'
@@ -9,9 +10,9 @@ export function AdminLayout() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 lg:px-8">
       <header className="flex items-center justify-between gap-3 border-b border-line py-4">
-        <Link to="/admin" className="flex items-center gap-2 font-display text-xl font-bold tracking-widest text-cream uppercase">
-          <img src="/favicon.svg" alt="" className="size-7" />
-          Barbearia <span className="text-sm font-semibold tracking-normal text-brass normal-case">super admin</span>
+        <Link to="/admin" className="flex items-center gap-3">
+          <BrandMark />
+          <span className="text-sm font-semibold text-accent">super admin</span>
         </Link>
         <div className="flex items-center gap-3 text-sm">
           <Link to="/" className="text-muted hover:text-cream">

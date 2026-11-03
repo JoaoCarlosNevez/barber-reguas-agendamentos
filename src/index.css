@@ -1,19 +1,33 @@
 @import 'tailwindcss';
 
+/* Identidade Studio Réguas: preto e osso da logo + vermelho de barbearia. */
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
 
-  --color-ink: #0f0e0c;
-  --color-surface: #1a1815;
-  --color-surface-2: #24211d;
-  --color-line: #3a352e;
-  --color-cream: #f3efe6;
-  --color-muted: #a39b8c;
-  --color-brass: #c8a24a;
-  --color-brass-strong: #e0b955;
-  --color-danger: #e5654f;
-  --color-success: #6fbf73;
+  --color-ink: #0b0b0b;
+  --color-surface: #151515;
+  --color-surface-2: #1e1e1e;
+  --color-line: #2d2d2d;
+  --color-cream: #f4f1ea;
+  --color-muted: #9b968d;
+  --color-accent: #ef3340;
+  --color-accent-strong: #ff4d59;
+  --color-on-accent: #ffffff;
+  --color-danger: #ff6b5b;
+  --color-success: #5fcf86;
+
+  --animate-step-in: step-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  @keyframes step-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
@@ -28,6 +42,25 @@
     @apply font-display uppercase tracking-wide;
   }
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brass;
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@layer components {
+  /* faixa diagonal de poste de barbearia, usada como detalhe da marca */
+  .barber-stripe {
+    height: 4px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--color-accent) 0 8px,
+      var(--color-cream) 8px 16px,
+      var(--color-ink) 16px 24px
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in {
+    animation: none;
   }
 }

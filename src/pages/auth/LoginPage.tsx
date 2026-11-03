@@ -51,7 +51,7 @@ export function LoginPage({ variant = 'site' }: { variant?: 'site' | 'app' }) {
         ) : (
           <>
             Área do dono e dos barbeiros. É cliente?{' '}
-            <Link to="/entrar" className="text-brass underline underline-offset-4">
+            <Link to="/entrar" className="text-accent underline underline-offset-4">
               Entre com seu celular
             </Link>
           </>

@@ -121,7 +121,7 @@ function AlsoBarberCard({ userId }: { userId: string }) {
   })
 
   return (
-    <Card className="border-brass/50">
+    <Card className="border-accent/50">
       <p className="font-semibold">Você também atende?</p>
       <p className="mt-1 text-sm text-muted">
         Entre na agenda como barbeiro: os clientes poderão marcar com você e você recebe os avisos no app. Começa com
@@ -171,7 +171,7 @@ export function NewBarberForm({ onDone, kind = 'barber' }: { onDone: () => void;
   })
 
   return (
-    <Card className="border-brass/50">
+    <Card className="border-accent/50">
       <form noValidate onSubmit={form.handleSubmit((v) => create.mutate(v))} className="space-y-3">
         <p className="text-sm text-muted">
           {kind === 'admin'
@@ -238,7 +238,7 @@ function ServiceChecks({
             aria-pressed={on}
             onClick={() => onChange(on ? value.filter((x) => x !== s.id) : [...value, s.id])}
             className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-              on ? 'border-brass bg-brass/15 text-brass' : 'border-line text-muted'
+              on ? 'border-accent bg-accent/15 text-accent' : 'border-line text-muted'
             }`}
           >
             {on ? '✓ ' : ''}
@@ -292,7 +292,7 @@ function BarberBasics({ barber }: { barber: BarberRow }) {
       <label className="flex items-center gap-3 text-sm">
         <input
           type="checkbox"
-          className="size-5 accent-[var(--color-brass)]"
+          className="size-5 accent-[var(--color-accent)]"
           checked={barber.active}
           onChange={(e) => save.mutate({ active: e.target.checked })}
         />
@@ -478,7 +478,7 @@ function WorkingHoursForm({ barberId, initial }: { barberId: string; initial: Ta
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input
                 type="checkbox"
-                className="size-4 accent-[var(--color-brass)]"
+                className="size-4 accent-[var(--color-accent)]"
                 checked={r.enabled}
                 onChange={(e) => update(r.weekday, { enabled: e.target.checked })}
               />
@@ -609,7 +609,7 @@ function TimeOffEditor({ barberId }: { barberId: string }) {
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            className="size-4 accent-[var(--color-brass)]"
+            className="size-4 accent-[var(--color-accent)]"
             checked={allDay}
             onChange={(e) => setAllDay(e.target.checked)}
           />

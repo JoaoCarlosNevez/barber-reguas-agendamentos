@@ -4,8 +4,8 @@ import { forwardRef, useId } from 'react'
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brass text-ink hover:bg-brass-strong disabled:bg-brass/40',
-  secondary: 'border border-line bg-surface-2 text-cream hover:border-brass/60 disabled:opacity-50',
+  primary: 'bg-accent text-on-accent hover:bg-accent-strong disabled:bg-accent/40',
+  secondary: 'border border-line bg-surface-2 text-cream hover:border-accent/60 disabled:opacity-50',
   ghost: 'text-muted hover:text-cream disabled:opacity-50',
   danger: 'border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-50',
 }
@@ -44,7 +44,7 @@ export function Card({ className = '', children }: { className?: string; childre
 }
 
 const inputClass =
-  'w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-cream placeholder:text-muted/70 focus:border-brass focus:outline-none aria-[invalid=true]:border-danger'
+  'w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-cream placeholder:text-muted/70 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger'
 
 interface FieldProps {
   label: string
@@ -101,7 +101,7 @@ export const Select = forwardRef<
 })
 
 const badgeTones = {
-  scheduled: 'bg-brass/15 text-brass',
+  scheduled: 'bg-accent/15 text-accent',
   completed: 'bg-success/15 text-success',
   cancelled: 'bg-danger/15 text-danger',
   no_show: 'bg-muted/15 text-muted',

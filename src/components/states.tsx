@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 export function Spinner({ label = 'Carregando…' }: { label?: string }) {
   return (
     <output className="flex items-center justify-center gap-3 py-10 text-muted">
-      <span aria-hidden className="size-5 animate-spin rounded-full border-2 border-line border-t-brass" />
+      <span aria-hidden className="size-5 animate-spin rounded-full border-2 border-line border-t-accent" />
       <span>{label}</span>
     </output>
   )

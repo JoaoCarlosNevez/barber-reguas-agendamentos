@@ -26,7 +26,7 @@ export function RequireRole({
       <section className="py-10 text-center">
         <h1 className="text-2xl font-bold">Acesso restrito</h1>
         <p className="mt-2 text-muted">Sua conta não tem permissão para esta área.</p>
-        <Link to={homeForRole(role)} className="mt-6 inline-block text-brass underline underline-offset-4">
+        <Link to={homeForRole(role)} className="mt-6 inline-block text-accent underline underline-offset-4">
           Ir para minha área
         </Link>
       </section>

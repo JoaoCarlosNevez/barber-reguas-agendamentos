@@ -68,7 +68,7 @@ export function CustomerLoginPage() {
         </Button>
         <p className="text-center text-sm text-muted">
           Use o mesmo nome do seu primeiro agendamento.{' '}
-          <Link to="/entrar/equipe" className="text-brass underline underline-offset-4">
+          <Link to="/entrar/equipe" className="text-accent underline underline-offset-4">
             Sou da equipe
           </Link>
         </p>

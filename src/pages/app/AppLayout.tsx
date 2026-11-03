@@ -1,10 +1,11 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import { BrandMark } from '@/components/Brand'
 import { InstallBanner } from '@/components/InstallBanner'
 import { isManager, useAuth } from '@/lib/auth'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold transition-colors ${
-    isActive ? 'text-brass' : 'text-muted hover:text-cream'
+    isActive ? 'text-accent' : 'text-muted hover:text-cream'
   }`
 
 /** App da equipe (PWA instalável): dono e barbeiros. */
@@ -14,9 +15,8 @@ export function AppLayout() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-4 pt-[env(safe-area-inset-top)]">
       <header className="flex items-center justify-between gap-2 py-4">
-        <Link to="/app" className="flex items-center gap-2 font-display text-xl font-bold tracking-widest text-cream uppercase">
-          <img src="/favicon.svg" alt="" className="size-7" />
-          Barbearia
+        <Link to="/app" aria-label="Studio Réguas: agenda">
+          <BrandMark />
         </Link>
         <span className="text-xs font-semibold tracking-wide text-muted uppercase">Equipe</span>
       </header>

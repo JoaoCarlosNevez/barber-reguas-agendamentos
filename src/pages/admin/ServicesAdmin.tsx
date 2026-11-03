@@ -121,7 +121,7 @@ function ServiceForm({ service, onDone }: { service?: Tables<'services'>; onDone
   })
 
   return (
-    <Card className="border-brass/50">
+    <Card className="border-accent/50">
       <form noValidate onSubmit={form.handleSubmit((v) => save.mutate(v))} className="space-y-3">
         <Input label="Nome" error={form.formState.errors.name?.message} {...form.register('name')} />
         <div className="grid grid-cols-2 gap-3">

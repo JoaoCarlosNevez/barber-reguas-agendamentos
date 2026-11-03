@@ -33,7 +33,7 @@ export function ManageTabs() {
             aria-current={tab === id ? 'page' : undefined}
             onClick={() => setParams({ aba: id }, { replace: true })}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === id ? 'bg-brass text-ink' : 'bg-surface-2 text-muted hover:text-cream'
+              tab === id ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-cream'
             }`}
           >
             {MANAGE_TABS[id].label}

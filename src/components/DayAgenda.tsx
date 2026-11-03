@@ -74,7 +74,7 @@ function DateNav({ date, today, onChange }: { date: string; today: string; onCha
       <div className="text-center">
         <p className="font-semibold first-letter:uppercase">{longDay.format(calendarDate(date))}</p>
         {date !== today ? (
-          <button type="button" className="text-xs text-brass underline" onClick={() => onChange(today)}>
+          <button type="button" className="text-xs text-accent underline" onClick={() => onChange(today)}>
             voltar para hoje
           </button>
         ) : (
@@ -168,7 +168,7 @@ export function DayAgenda({
             <p className="text-xs text-muted">atendimento(s)</p>
           </Card>
           <Card className="py-3">
-            <p className="font-display text-3xl font-bold text-brass">{formatPrice(received)}</p>
+            <p className="font-display text-3xl font-bold text-accent">{formatPrice(received)}</p>
             <p className="text-xs text-muted">recebido{expected ? ` · + ${formatPrice(expected)} previsto` : ''}</p>
           </Card>
         </div>
@@ -196,7 +196,7 @@ export function DayAgenda({
                 key={a.id}
                 ref={a.id === focusId ? (el) => el?.scrollIntoView({ block: 'center', behavior: 'smooth' }) : undefined}
               >
-                <Card className={a.status === 'cancelled' ? 'opacity-50' : pendingClose ? 'border-brass/60' : ''}>
+                <Card className={a.status === 'cancelled' ? 'opacity-50' : pendingClose ? 'border-accent/60' : ''}>
                   <div className="flex items-start gap-3">
                     <div className="w-16 shrink-0">
                       <p className="font-display text-2xl font-bold leading-none">{formatTime(a.starts_at)}</p>
@@ -218,15 +218,15 @@ export function DayAgenda({
                         </p>
                       ) : null}
                       {pendingClose && !isConfirming ? (
-                        <p className="text-sm text-brass">Terminou: marque como atendido e informe o pagamento.</p>
+                        <p className="text-sm text-accent">Terminou: marque como atendido e informe o pagamento.</p>
                       ) : null}
                       {c ? (
                         <p className="mt-1 flex flex-wrap gap-3 text-sm">
-                          <a className="text-brass underline underline-offset-2" href={`tel:${c.phone}`}>
+                          <a className="text-accent underline underline-offset-2" href={`tel:${c.phone}`}>
                             {formatBrPhone(c.phone)}
                           </a>
                           <a
-                            className="text-brass underline underline-offset-2"
+                            className="text-accent underline underline-offset-2"
                             href={`https://wa.me/${c.phone.replace('+', '')}`}
                             target="_blank"
                             rel="noreferrer"
@@ -341,7 +341,7 @@ function CompleteForm({
             aria-pressed={method === m}
             onClick={() => setMethod(m)}
             className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${
-              method === m ? 'border-brass bg-brass/15 text-brass' : 'border-line text-muted hover:text-cream'
+              method === m ? 'border-accent bg-accent/15 text-accent' : 'border-line text-muted hover:text-cream'
             }`}
           >
             {PAYMENT_LABEL[m]}

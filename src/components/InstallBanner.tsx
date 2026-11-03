@@ -29,7 +29,7 @@ export function InstallBanner() {
   }
 
   return (
-    <Card className="mb-4 border-brass/60">
+    <Card className="mb-4 border-accent/60">
       <div className="flex items-start gap-3">
         <img src="/pwa-192.png" alt="" className="size-12 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1">

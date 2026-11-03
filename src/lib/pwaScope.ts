@@ -37,7 +37,7 @@ export function syncPwaScope(pathname: string) {
     }
     setMeta('apple-mobile-web-app-capable', 'yes')
     setMeta('mobile-web-app-capable', 'yes')
-    setMeta('apple-mobile-web-app-title', 'Barbearia')
+    setMeta('apple-mobile-web-app-title', 'Studio Réguas')
   } else {
     link?.remove()
     setMeta('apple-mobile-web-app-capable', null)

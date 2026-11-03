@@ -39,7 +39,7 @@ self.addEventListener('push', (event) => {
     data = { body: event.data?.text() ?? '' }
   }
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Barbearia', {
+    self.registration.showNotification(data.title ?? 'Studio Réguas', {
       body: data.body ?? '',
       icon: '/pwa-192.png',
       badge: '/pwa-192.png',

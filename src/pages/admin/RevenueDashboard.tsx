@@ -116,7 +116,7 @@ export function RevenueDashboard() {
             aria-pressed={period === p.id}
             onClick={() => setPeriod(p.id)}
             className={`shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-              period === p.id ? 'border-brass text-brass' : 'border-line text-muted hover:text-cream'
+              period === p.id ? 'border-accent text-accent' : 'border-line text-muted hover:text-cream'
             }`}
           >
             {p.label}
@@ -132,7 +132,7 @@ export function RevenueDashboard() {
         <>
           <Card className="py-5 text-center">
             <p className="text-sm text-muted">Faturamento</p>
-            <p className="font-display text-5xl font-bold text-brass">{formatPrice(total)}</p>
+            <p className="font-display text-5xl font-bold text-accent">{formatPrice(total)}</p>
             <p className="mt-1 text-sm text-muted">
               {done.length} atendimento{done.length === 1 ? '' : 's'} concluído{done.length === 1 ? '' : 's'}
             </p>
@@ -187,7 +187,7 @@ function BarList({ title, rows, format }: { title: string; rows: Row[]; format: 
               </span>
             </div>
             <div className="mt-1 h-2 rounded-full bg-surface-2" aria-hidden>
-              <div className="h-2 rounded-full bg-brass" style={{ width: `${(r.value / max) * 100}%` }} />
+              <div className="h-2 rounded-full bg-accent" style={{ width: `${(r.value / max) * 100}%` }} />
             </div>
           </li>
         ))}
