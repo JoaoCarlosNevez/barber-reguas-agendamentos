@@ -235,11 +235,17 @@ function LoyaltyCard({
           <span
             key={i}
             aria-hidden
-            className={`grid aspect-square place-items-center rounded-full border-2 text-lg ${
-              i < stamps ? 'border-accent bg-accent text-on-accent' : 'border-dashed border-line text-line'
+            className={`grid aspect-square place-items-center rounded-full border-2 ${
+              i < stamps ? 'border-accent bg-accent' : 'border-dashed border-line'
             }`}
           >
-            ✂
+            <img
+              src="/brand/shield-white.png"
+              alt=""
+              width={184}
+              height={256}
+              className={`h-3/5 w-auto ${i < stamps ? '' : 'opacity-15'}`}
+            />
           </span>
         ))}
       </div>
