@@ -34,6 +34,10 @@ export function AppLayout() {
               <span aria-hidden className="text-lg leading-none">📅</span>
               Agenda
             </NavLink>
+            <NavLink to="/app/fechar" className={tabClass}>
+              <span aria-hidden className="text-lg leading-none">🔒</span>
+              Fechar data
+            </NavLink>
             {isManager(role) ? (
               <NavLink to="/app/gestao" className={tabClass}>
                 <span aria-hidden className="text-lg leading-none">⚙️</span>

@@ -19,7 +19,6 @@ import { addDays, dateInTz, formatBrPhone, zonedToUtc } from '@/lib/shared'
 import { type Enums, supabase } from '@/lib/supabase'
 import { useNow } from '@/hooks/useNow'
 import { cancelWhatsappUrl } from '@/lib/whatsapp'
-import { CloseDay } from './CloseDay'
 
 type Status = Enums<'appointment_status'>
 type PaymentMethod = Enums<'payment_method'>
@@ -168,15 +167,6 @@ export function DayAgenda({
   return (
     <div className="space-y-4">
       <DateNav date={date} today={today} onChange={setDate} />
-
-      {barberId && date >= today && agenda.data ? (
-        <CloseDay
-          key={`${barberId}-${date}`}
-          barberId={barberId}
-          date={date}
-          scheduled={list.filter((a) => a.status === 'scheduled')}
-        />
-      ) : null}
 
       {agenda.data ? (
         <div className="grid grid-cols-2 gap-2 text-center">

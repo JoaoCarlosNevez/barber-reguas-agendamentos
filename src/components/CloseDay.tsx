@@ -109,7 +109,7 @@ export function CloseDay({ barberId, date, scheduled }: { barberId: string; date
             Reabrir agenda do dia
           </Button>
         ) : (
-          <p className="mt-2 text-xs text-muted">Bloqueio de vários dias: o dono reabre em Gestão › Barbeiros.</p>
+          <p className="mt-2 text-xs text-muted">Bloqueio de vários dias: reabra em Datas fechadas, abaixo.</p>
         )}
         {reopen.isError ? <p className="mt-2 text-sm text-danger">{errorMessage(reopen.error)}</p> : null}
       </Card>

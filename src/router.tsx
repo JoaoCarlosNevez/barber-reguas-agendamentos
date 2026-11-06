@@ -6,6 +6,7 @@ import { AccountPage } from '@/pages/account/AccountPage'
 import { AdminLayout, AdminPage } from '@/pages/admin/AdminPage'
 import { AppAccountPage } from '@/pages/app/AppAccountPage'
 import { AppAgendaPage } from '@/pages/app/AppAgendaPage'
+import { AppCloseDayPage } from '@/pages/app/AppCloseDayPage'
 import { AppLayout } from '@/pages/app/AppLayout'
 import { AppManagePage } from '@/pages/app/AppManagePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -50,6 +51,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole roles={STAFF_ROLES} loginPath="/app/entrar">
             <AppAgendaPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'fechar',
+        element: (
+          <RequireRole roles={STAFF_ROLES} loginPath="/app/entrar">
+            <AppCloseDayPage />
           </RequireRole>
         ),
       },
