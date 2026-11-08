@@ -67,6 +67,10 @@ function translateSupabaseError(msg: string): string {
     [/payment_locked/i, 'Só o dono pode corrigir o pagamento de um atendimento concluído.'],
     [/appointments_no_overlap/i, 'Conflito com outro agendamento.'],
     [/failed to fetch|network/i, 'Sem conexão com o servidor.'],
+    [/customers_(guest|account)_phone_uniq/i, 'Já existe outro cliente com esse celular.'],
+    [/invalid_name/i, 'Informe o nome do cliente.'],
+    [/^forbidden$/i, 'Só o dono pode fazer isso.'],
+    [/^not_found$/i, 'Cliente não encontrado. Atualize a lista.'],
     [/duplicate key/i, 'Esse registro já existe.'],
     [/violates check constraint/i, 'Valores inválidos. Confira os campos.'],
   ]

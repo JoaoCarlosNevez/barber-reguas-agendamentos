@@ -682,3 +682,78 @@ describe('push', () => {
     expect(t.body.delivered).toBe(0)
   })
 })
+
+describe('dono gerencia clientes (Gestão › Clientes)', () => {
+  const asUser = async (email: string) => {
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    const { error } = await c.auth.signInWithPassword({ email, password: 'Senha@123' })
+    if (error) throw error
+    return c
+  }
+
+  it('só o dono edita/exclui; editar muda o login; excluir apaga histórico e conta', async () => {
+    const phone = `${PHONE_PREFIX}00901`
+    const newPhone = `${PHONE_PREFIX}00902`
+    const login = await callFn('customer-login', { name: 'Carla Teste', phone })
+    expect(login.status).toBe(200)
+    const userId = login.body.user_id as string | undefined
+    const { data: cust } = await admin.from('customers').select('id, auth_user_id').eq('phone', phone).single()
+    if (!cust) throw new Error('cliente não criado')
+    const startsAt = await firstSlot(futureDate(9))
+    const { data: appt } = await admin
+      .from('appointments')
+      .insert({
+        barber_id: RAFAEL,
+        customer_id: cust.id,
+        starts_at: startsAt,
+        ends_at: new Date(Date.parse(startsAt) + 30 * 60_000).toISOString(),
+        cancel_token_hash: 'f'.repeat(63) + '9',
+      })
+      .select('id')
+      .single()
+    expect(appt).toBeTruthy()
+
+    const rafael = await asUser('rafael@barbearia.dev')
+    const owner = await asUser('admin@barbearia.dev')
+
+    const denied = await rafael.rpc('admin_update_customer', { p_id: cust.id, p_name: 'X', p_phone: newPhone })
+    expect(denied.error?.message).toBe('forbidden')
+    expect((await rafael.rpc('admin_delete_customer', { p_id: cust.id })).error?.message).toBe('forbidden')
+
+    const edited = await owner.rpc('admin_update_customer', { p_id: cust.id, p_name: ' Carla Nova ', p_phone: newPhone })
+    expect(edited.error).toBeNull()
+    expect(edited.data).toMatchObject({ name: 'Carla Nova', phone: newPhone })
+    const { data: profile } = await admin.from('profiles').select('name, phone').eq('id', cust.auth_user_id ?? '').single()
+    expect(profile).toMatchObject({ name: 'Carla Nova', phone: newPhone })
+    const relogin = await callFn('customer-login', { name: 'Carla', phone: newPhone })
+    expect(relogin.status).toBe(200)
+    expect(relogin.body.created).toBe(false)
+
+    const bad = await owner.rpc('admin_update_customer', { p_id: cust.id, p_name: 'Carla', p_phone: '123' })
+    expect(bad.error).not.toBeNull()
+
+    const del = await owner.rpc('admin_delete_customer', { p_id: cust.id })
+    expect(del.error).toBeNull()
+    expect((await admin.from('customers').select('id').eq('id', cust.id)).data).toEqual([])
+    expect((await admin.from('appointments').select('id').eq('id', appt?.id ?? '')).data).toEqual([])
+    const { data: gone } = await admin.auth.admin.getUserById(cust.auth_user_id ?? userId ?? '')
+    expect(gone.user).toBeNull()
+
+    // celular livre de novo: cadastro novo funciona
+    const fresh = await callFn('customer-login', { name: 'Outra Pessoa', phone: newPhone })
+    expect(fresh.status).toBe(200)
+    expect(fresh.body.created).toBe(true)
+  })
+
+  it('excluir cliente nunca apaga conta da equipe', async () => {
+    const owner = await asUser('admin@barbearia.dev')
+    const { data: c } = await admin
+      .from('customers')
+      .insert({ name: 'Visitante Teste', phone: `${PHONE_PREFIX}00903`, is_guest: true })
+      .select('id')
+      .single()
+    expect((await owner.rpc('admin_delete_customer', { p_id: c?.id ?? '' })).error).toBeNull()
+    const { data: staff } = await admin.auth.admin.getUserById('b0000000-0000-4000-8000-000000000001')
+    expect(staff.user).not.toBeNull()
+  })
+})

@@ -291,7 +291,25 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "book_appointment":
+            "admin_delete_customer":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"admin_update_customer":
+{ Args: { "p_id": string,"p_name": string,"p_phone": string }; Returns: {
+              "auth_user_id": string | null,
+"created_at": string,
+"id": string,
+"is_guest": boolean,
+"name": string,
+"phone": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "customers"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"book_appointment":
 { Args: { "p_auth_user_id"?: string,"p_barber_id": string,"p_cancel_token_hash": string,"p_customer_name": string,"p_customer_phone": string,"p_service_ids": (string)[],"p_starts_at": string }; Returns: {
               "appointment_id": string,"customer_id": string,"customer_name": string,"ends_at": string,"starts_at": string,"total_price_cents": number
             }[]

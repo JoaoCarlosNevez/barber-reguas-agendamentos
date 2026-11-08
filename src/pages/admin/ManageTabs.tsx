@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 import { BarbersAdmin } from './BarbersAdmin'
+import { CustomersAdmin } from './CustomersAdmin'
 import { LoyaltyAdmin } from './LoyaltyAdmin'
 import { RevenueDashboard } from './RevenueDashboard'
 import { ServicesAdmin } from './ServicesAdmin'
@@ -9,6 +10,7 @@ import { SettingsAdmin } from './SettingsAdmin'
 const MANAGE_TABS = {
   faturamento: { label: 'Faturamento', render: () => <RevenueDashboard /> },
   barbeiros: { label: 'Barbeiros', render: () => <BarbersAdmin /> },
+  clientes: { label: 'Clientes', render: () => <CustomersAdmin /> },
   servicos: { label: 'Serviços', render: () => <ServicesAdmin /> },
   fidelidade: { label: 'Fidelidade', render: () => <LoyaltyAdmin /> },
   ajustes: { label: 'Ajustes', render: () => <SettingsAdmin /> },
