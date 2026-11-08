@@ -35,10 +35,11 @@ function useDayAgenda(date: string, barberId: string | null) {
       let q = supabase
         .from('appointments')
         .select(
-          `id, starts_at, ends_at, status, cancelled_by, payment_method, paid_cents,
+          `id, starts_at, ends_at, status, cancelled_by, payment_method, paid_cents, subscription_id,
            barber:barbers(id, display_name),
            customer:customers(id, name, phone, is_guest, auth_user_id),
-           appointment_services(service_name, price_cents, duration_min)`,
+           subscription:customer_subscriptions(plan_name, cuts_included),
+           appointment_services(service_name, price_cents, duration_min, covered)`,
         )
         .gte('starts_at', from)
         .lt('starts_at', to)
@@ -61,7 +62,15 @@ function useDayAgenda(date: string, barberId: string | null) {
         if (sErr) throw sErr
         for (const r of rows) stamps.set(r.customer_id, (stamps.get(r.customer_id) ?? 0) + 1)
       }
-      return { appointments: data, stamps }
+      // cortes usados de cada assinatura que aparece no dia
+      const subIds = [...new Set(data.map((a) => a.subscription_id).filter((x): x is string => x !== null))]
+      const subUsed = new Map<string, number>()
+      if (subIds.length) {
+        const { data: usage, error: uErr } = await supabase.rpc('subscription_usage', { p_ids: subIds })
+        if (uErr) throw uErr
+        for (const u of usage) subUsed.set(u.subscription_id, u.used)
+      }
+      return { appointments: data, stamps, subUsed }
     },
   })
 }
@@ -159,7 +168,9 @@ export function DayAgenda({
   const rule = catalog.data?.loyaltyRule ?? null
   const list = agenda.data?.appointments ?? []
   const active = list.filter((a) => a.status !== 'cancelled')
-  const priceOf = (a: (typeof list)[number]) => a.appointment_services.reduce((s, x) => s + x.price_cents, 0)
+  // o que a assinatura cobre não é cobrado
+  const priceOf = (a: (typeof list)[number]) =>
+    a.appointment_services.reduce((s, x) => s + (x.covered ? 0 : x.price_cents), 0)
   const received = list.filter((a) => a.status === 'completed').reduce((t, a) => t + (a.paid_cents ?? priceOf(a)), 0)
   const expected = list.filter((a) => a.status === 'scheduled').reduce((t, a) => t + priceOf(a), 0)
   const now = nowDate.getTime()
@@ -227,10 +238,20 @@ export function DayAgenda({
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold">{c?.name ?? 'Cliente'}</p>
                         <Badge tone={a.status}>{STATUS_LABEL[a.status]}</Badge>
+                        {a.subscription_id ? (
+                          <Badge tone="scheduled">
+                            Assinante
+                            {a.subscription
+                              ? ` · ${agenda.data.subUsed.get(a.subscription_id) ?? '?'}/${a.subscription.cuts_included}`
+                              : ''}
+                          </Badge>
+                        ) : null}
                       </div>
                       <p className="text-sm text-muted">
-                        {a.appointment_services.map((s) => s.service_name).join(' + ')} ·{' '}
-                        {formatPrice(a.appointment_services.reduce((t, s) => t + s.price_cents, 0))}
+                        {a.appointment_services
+                          .map((s) => (s.covered ? `${s.service_name} (assinatura)` : s.service_name))
+                          .join(' + ')}{' '}
+                        · {a.subscription_id && priceOf(a) === 0 ? 'coberto pela assinatura' : formatPrice(priceOf(a))}
                         {showBarber && a.barber ? ` · ${a.barber.display_name}` : ''}
                       </p>
                       {a.status === 'completed' && a.payment_method ? (
@@ -275,6 +296,8 @@ export function DayAgenda({
                     isConfirming && confirm.status === 'completed' && started ? (
                       <CompleteForm
                         totalCents={priceOf(a)}
+                        covered={a.subscription_id !== null}
+                        onConfirmCovered={() => setStatus.mutate({ id: a.id, status: 'completed' })}
                         loading={setStatus.isPending}
                         onCancel={() => setConfirm(null)}
                         onConfirm={(payment) => setStatus.mutate({ id: a.id, status: 'completed', payment })}
@@ -346,21 +369,43 @@ export function DayAgenda({
 /** Concluir atendimento: forma de pagamento (obrigatória) + valor recebido. */
 function CompleteForm({
   totalCents,
+  covered,
   loading,
   onConfirm,
+  onConfirmCovered,
   onCancel,
 }: {
   totalCents: number
+  covered: boolean
   loading: boolean
   onConfirm: (p: { method: PaymentMethod; cents: number }) => void
+  onConfirmCovered: () => void
   onCancel: () => void
 }) {
   const [method, setMethod] = useState<PaymentMethod | null>(null)
   const [amount, setAmount] = useState(centsToInput(totalCents))
   const cents = parseBrlToCents(amount)
 
+  // tudo coberto pela assinatura: só confirmar
+  if (covered && totalCents === 0) {
+    return (
+      <div className="mt-3 space-y-3 border-t border-line pt-3">
+        <p className="text-sm">Coberto pela assinatura: nada a cobrar.</p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={loading} onClick={onConfirmCovered}>
+            ✓ Concluir atendimento
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancel}>
+            Voltar
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
+      {covered ? <p className="text-sm text-muted">O que a assinatura cobre já está descontado.</p> : null}
       <p className="text-sm font-semibold">Como foi pago?</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {PAYMENT_METHODS.map((m) => (

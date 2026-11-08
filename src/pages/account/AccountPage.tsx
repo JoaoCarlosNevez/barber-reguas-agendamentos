@@ -11,7 +11,9 @@ import { homeForRole, type Profile, useAuth } from '@/lib/auth'
 import { useCatalog } from '@/lib/catalog'
 import { formatLongDate, formatPrice, formatShortDate, formatTime, STATUS_LABEL } from '@/lib/format'
 import { maskBrPhone } from '@/lib/phoneMask'
-import { checkCustomerCancel, formatBrPhone, normalizeBrPhone } from '@/lib/shared'
+import { APP_TIMEZONE } from '@/lib/env'
+import { checkCustomerCancel, dateInTz, formatBrPhone, normalizeBrPhone } from '@/lib/shared'
+import { currentSubscription, subscriptionLastDay, useMySubscriptions } from '@/lib/subscription'
 import { supabase } from '@/lib/supabase'
 import { useNow } from '@/hooks/useNow'
 
@@ -114,6 +116,7 @@ function CustomerSections() {
 
   return (
     <>
+      <SubscriptionCard />
       {rule ? <LoyaltyCard stamps={data.data.stamps} required={rule.stamps_required} reward={rule.reward_description} redemptions={data.data.redemptions} /> : null}
 
       <section>
@@ -322,6 +325,37 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           </Button>
         </form>
       </Card>
+    </section>
+  )
+}
+
+function SubscriptionCard() {
+  const subs = useMySubscriptions(true)
+  const today = dateInTz(useNow(), APP_TIMEZONE)
+  const current = currentSubscription(subs.data ?? [], today)
+  if (!current) return null
+  const left = Math.max(0, current.cuts_included - current.used)
+  return (
+    <section className="rounded-2xl border border-blue/40 bg-surface p-5">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-xl font-semibold">Sua assinatura</h2>
+        <span className="text-sm text-muted">até {subscriptionLastDay(current.ends_on)}</span>
+      </div>
+      <p className="mt-1 text-sm text-muted">{current.plan_name}</p>
+      <p className="mt-3">
+        <span className="font-display text-4xl font-bold">{current.used}</span>
+        <span className="text-muted"> de {current.cuts_included} cortes usados</span>
+      </p>
+      <p className="mt-1 text-sm">
+        {left > 0 ? (
+          <>
+            Ainda tem <strong className="text-accent">{left}</strong> {left === 1 ? 'corte' : 'cortes'} neste mês. É só
+            agendar com este celular.
+          </>
+        ) : (
+          'Os cortes deste mês acabaram. Novos agendamentos têm o preço normal até renovar.'
+        )}
+      </p>
     </section>
   )
 }

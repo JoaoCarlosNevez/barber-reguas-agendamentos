@@ -20,6 +20,10 @@ export interface PublicAppointment {
   customer_name: string
   services: { id: string; name: string; duration_min: number; price_cents: number }[]
   total_price_cents: number
+  /** a pagar no local (sem o que a assinatura cobre); ausente em respostas antigas */
+  amount_due_cents?: number
+  covered_service_ids?: string[]
+  subscription?: { plan_name: string; cuts_included: number; cuts_used: number; ends_on: string } | null
   cancel_min_notice_hours: number
   cancel_deadline: string
   can_cancel: boolean
@@ -126,19 +130,35 @@ export function AppointmentPage() {
         </p>
 
         <ul className="mt-4 divide-y divide-line border-t border-line">
-          {a.services.map((s) => (
-            <li key={s.id} className="flex justify-between py-2 text-sm">
-              <span>
-                {s.name} <span className="text-muted">· {formatDuration(s.duration_min)}</span>
-              </span>
-              <span>{formatPrice(s.price_cents)}</span>
-            </li>
-          ))}
+          {a.services.map((s) => {
+            const covered = a.covered_service_ids?.includes(s.id) ?? false
+            return (
+              <li key={s.id} className="flex justify-between py-2 text-sm">
+                <span>
+                  {s.name} <span className="text-muted">· {formatDuration(s.duration_min)}</span>
+                </span>
+                {covered ? (
+                  <span>
+                    <span className="mr-1 text-muted line-through">{formatPrice(s.price_cents)}</span>
+                    <span className="text-success">assinatura</span>
+                  </span>
+                ) : (
+                  <span>{formatPrice(s.price_cents)}</span>
+                )}
+              </li>
+            )
+          })}
           <li className="flex justify-between pt-2 font-semibold">
-            <span>Total (pagamento no local)</span>
-            <span className="text-accent">{formatPrice(a.total_price_cents)}</span>
+            <span>{(a.amount_due_cents ?? a.total_price_cents) === 0 ? 'A pagar' : 'Total (pagamento no local)'}</span>
+            <span className="text-accent">{formatPrice(a.amount_due_cents ?? a.total_price_cents)}</span>
           </li>
         </ul>
+        {a.subscription ? (
+          <p className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
+            ✓ Coberto pela sua assinatura ({a.subscription.plan_name}) · {a.subscription.cuts_used} de{' '}
+            {a.subscription.cuts_included} cortes usados este mês
+          </p>
+        ) : null}
       </Card>
 
       {scheduled ? (

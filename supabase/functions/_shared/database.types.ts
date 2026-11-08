@@ -21,14 +21,14 @@ export type Database = {
                   ]
                 },"appointment_services": {
                   Row: {
-                    "appointment_id": string,"duration_min": number,"price_cents": number,"service_id": string,"service_name": string
+                    "appointment_id": string,"covered": boolean,"duration_min": number,"price_cents": number,"service_id": string,"service_name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "appointment_id": string,"duration_min": number,"price_cents": number,"service_id": string,"service_name": string
+                    "appointment_id": string,"covered"?: boolean,"duration_min": number,"price_cents": number,"service_id": string,"service_name": string
                   }
                   Update: {
-                    "appointment_id"?: string,"duration_min"?: number,"price_cents"?: number,"service_id"?: string,"service_name"?: string
+                    "appointment_id"?: string,"covered"?: boolean,"duration_min"?: number,"price_cents"?: number,"service_id"?: string,"service_name"?: string
                   }
                   Relationships: [
                     {
@@ -47,14 +47,14 @@ isOneToOne: false
                   ]
                 },"appointments": {
                   Row: {
-                    "barber_id": string,"cancel_token_hash": string,"cancelled_at": string | null,"cancelled_by": Database["public"]['Enums']["cancel_actor"] | null,"completed_at": string | null,"completion_reminded_at": string | null,"created_at": string,"customer_id": string,"ends_at": string,"id": string,"paid_cents": number | null,"payment_method": Database["public"]['Enums']["payment_method"] | null,"return_pending": boolean,"return_reminded_at": string | null,"starts_at": string,"status": Database["public"]['Enums']["appointment_status"],"updated_at": string
+                    "barber_id": string,"cancel_token_hash": string,"cancelled_at": string | null,"cancelled_by": Database["public"]['Enums']["cancel_actor"] | null,"completed_at": string | null,"completion_reminded_at": string | null,"created_at": string,"customer_id": string,"ends_at": string,"id": string,"paid_cents": number | null,"payment_method": Database["public"]['Enums']["payment_method"] | null,"return_pending": boolean,"return_reminded_at": string | null,"starts_at": string,"status": Database["public"]['Enums']["appointment_status"],"subscription_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "barber_id": string,"cancel_token_hash": string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id": string,"ends_at": string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"return_pending"?: boolean,"return_reminded_at"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
+                    "barber_id": string,"cancel_token_hash": string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id": string,"ends_at": string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"return_pending"?: boolean,"return_reminded_at"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["appointment_status"],"subscription_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "barber_id"?: string,"cancel_token_hash"?: string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id"?: string,"ends_at"?: string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"return_pending"?: boolean,"return_reminded_at"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"updated_at"?: string
+                    "barber_id"?: string,"cancel_token_hash"?: string,"cancelled_at"?: string | null,"cancelled_by"?: Database["public"]['Enums']["cancel_actor"] | null,"completed_at"?: string | null,"completion_reminded_at"?: string | null,"created_at"?: string,"customer_id"?: string,"ends_at"?: string,"id"?: string,"paid_cents"?: number | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"return_pending"?: boolean,"return_reminded_at"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"subscription_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -68,6 +68,12 @@ isOneToOne: false
       columns: ["customer_id"]
 isOneToOne: false
       referencedRelation: "customers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "appointments_subscription_id_fkey"
+      columns: ["subscription_id"]
+isOneToOne: false
+      referencedRelation: "customer_subscriptions"
       referencedColumns: ["id"]
     }
                   ]
@@ -114,6 +120,38 @@ isOneToOne: false
       columns: ["profile_id"]
 isOneToOne: true
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"customer_subscriptions": {
+                  Row: {
+                    "covered_service_ids": (string)[],"created_at": string,"created_by": string | null,"customer_id": string,"cuts_adjustment": number,"cuts_included": number,"ends_on": string,"id": string,"paid_at": string | null,"payment_method": Database["public"]['Enums']["payment_method"] | null,"plan_id": string | null,"plan_name": string,"price_cents": number,"starts_on": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "covered_service_ids": (string)[],"created_at"?: string,"created_by"?: string | null,"customer_id": string,"cuts_adjustment"?: number,"cuts_included": number,"ends_on": string,"id"?: string,"paid_at"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"plan_id"?: string | null,"plan_name": string,"price_cents": number,"starts_on": string
+                  }
+                  Update: {
+                    "covered_service_ids"?: (string)[],"created_at"?: string,"created_by"?: string | null,"customer_id"?: string,"cuts_adjustment"?: number,"cuts_included"?: number,"ends_on"?: string,"id"?: string,"paid_at"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"] | null,"plan_id"?: string | null,"plan_name"?: string,"price_cents"?: number,"starts_on"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "customer_subscriptions_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "customer_subscriptions_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "customer_subscriptions_plan_id_fkey"
+      columns: ["plan_id"]
+isOneToOne: false
+      referencedRelation: "subscription_plans"
       referencedColumns: ["id"]
     }
                   ]
@@ -245,6 +283,46 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"subscription_plan_services": {
+                  Row: {
+                    "plan_id": string,"service_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "plan_id": string,"service_id": string
+                  }
+                  Update: {
+                    "plan_id"?: string,"service_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "subscription_plan_services_plan_id_fkey"
+      columns: ["plan_id"]
+isOneToOne: false
+      referencedRelation: "subscription_plans"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "subscription_plan_services_service_id_fkey"
+      columns: ["service_id"]
+isOneToOne: false
+      referencedRelation: "services"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"subscription_plans": {
+                  Row: {
+                    "active": boolean,"created_at": string,"cuts_per_month": number,"id": string,"name": string,"price_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"created_at"?: string,"cuts_per_month": number,"id"?: string,"name": string,"price_cents": number
+                  }
+                  Update: {
+                    "active"?: boolean,"created_at"?: string,"cuts_per_month"?: number,"id"?: string,"name"?: string,"price_cents"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"time_off": {
                   Row: {
                     "barber_id": string,"created_at": string,"ends_at": string,"id": string,"reason": string | null,"starts_at": string
@@ -291,8 +369,40 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "admin_delete_customer":
+            "admin_add_subscription":
+{ Args: { "p_customer_id": string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_plan_id": string,"p_price_cents": number,"p_starts_on": string }; Returns: {
+              "covered_service_ids": (string)[],
+"created_at": string,
+"created_by": string | null,
+"customer_id": string,
+"cuts_adjustment": number,
+"cuts_included": number,
+"ends_on": string,
+"id": string,
+"paid_at": string | null,
+"payment_method": Database["public"]['Enums']["payment_method"] | null,
+"plan_id": string | null,
+"plan_name": string,
+"price_cents": number,
+"starts_on": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "customer_subscriptions"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"admin_delete_customer":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"admin_delete_subscription":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"admin_set_subscription_payment":
+{ Args: { "p_id": string,"p_payment_method": Database["public"]['Enums']["payment_method"],"p_price_cents": number }; Returns: undefined
+                           },
+"admin_set_subscription_used":
+{ Args: { "p_id": string,"p_used": number }; Returns: undefined
                            },
 "admin_update_customer":
 { Args: { "p_id": string,"p_name": string,"p_phone": string }; Returns: {
@@ -331,10 +441,15 @@ isOneToOne: false
         to: "loyalty_redemptions"
         isOneToOne: true
         isSetofReturn: false
-      } }
+      } },
+"subscription_usage":
+{ Args: { "p_ids": (string)[] }; Returns: {
+              "subscription_id": string,"used": number
+            }[]
+                           }
           }
           Enums: {
-            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","payment_method": "pix"|"cash"|"debit"|"credit","user_role": "customer"|"barber"|"admin"|"super_admin"
+            "appointment_status": "scheduled"|"cancelled"|"completed"|"no_show","cancel_actor": "customer"|"barber"|"admin"|"system","payment_method": "pix"|"cash"|"debit"|"credit"|"subscription","user_role": "customer"|"barber"|"admin"|"super_admin"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -450,7 +565,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"payment_method": ["pix", "cash", "debit", "credit"],"user_role": ["customer", "barber", "admin", "super_admin"]
+            "appointment_status": ["scheduled", "cancelled", "completed", "no_show"],"cancel_actor": ["customer", "barber", "admin", "system"],"payment_method": ["pix", "cash", "debit", "credit", "subscription"],"user_role": ["customer", "barber", "admin", "super_admin"]
           }
         }
 } as const

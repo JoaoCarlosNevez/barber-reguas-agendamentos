@@ -82,7 +82,11 @@ export async function loginCustomer(db: AdminClient, FN: string, name: string, p
     ])
     if (guest && mine) {
       const { error: moveErr } = await db.from('appointments').update({ customer_id: mine.id }).eq('customer_id', guest.id)
-      if (moveErr) log.warn(FN, 'adopt_guest_failed', { code: moveErr.code })
+      // assinatura liberada para o visitante passa para a conta
+      const { error: subErr } = moveErr
+        ? { error: null }
+        : await db.from('customer_subscriptions').update({ customer_id: mine.id }).eq('customer_id', guest.id)
+      if (moveErr || subErr) log.warn(FN, 'adopt_guest_failed', { code: (moveErr ?? subErr)?.code ?? null })
       else await db.from('customers').delete().eq('id', guest.id)
     }
   }

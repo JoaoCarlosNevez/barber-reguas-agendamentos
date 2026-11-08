@@ -64,6 +64,7 @@ export const PAYMENT_LABEL = {
   cash: 'Dinheiro',
   debit: 'Débito',
   credit: 'Crédito',
+  subscription: 'Assinatura',
 } as const
 
 export const PAYMENT_METHODS = ['pix', 'cash', 'debit', 'credit'] as const

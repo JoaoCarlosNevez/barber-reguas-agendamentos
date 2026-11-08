@@ -71,6 +71,11 @@ function translateSupabaseError(msg: string): string {
     [/invalid_name/i, 'Informe o nome do cliente.'],
     [/^forbidden$/i, 'Só o dono pode fazer isso.'],
     [/^not_found$/i, 'Cliente não encontrado. Atualize a lista.'],
+    [/customer_subscriptions_no_overlap/i, 'Esse cliente já tem assinatura nesse período. Renove a partir do fim da atual.'],
+    [/plan_without_services/i, 'O plano não tem serviços cobertos. Edite o plano.'],
+    [/plan_not_found/i, 'Plano não encontrado. Atualize a página.'],
+    [/invalid_price/i, 'Valor inválido.'],
+    [/invalid_used/i, 'Quantidade de cortes inválida.'],
     [/duplicate key/i, 'Esse registro já existe.'],
     [/violates check constraint/i, 'Valores inválidos. Confira os campos.'],
   ]

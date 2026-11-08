@@ -3,10 +3,10 @@ import { AppError } from './http.ts'
 import { type AppointmentStatus, cancelDeadline, checkCustomerCancel } from './policy.ts'
 import type { AdminClient } from './supabase.ts'
 
-const SELECT = `id, barber_id, customer_id, starts_at, ends_at, status, cancelled_by, cancelled_at,
+const SELECT = `id, barber_id, customer_id, starts_at, ends_at, status, cancelled_by, cancelled_at, subscription_id,
   barber:barbers(id, display_name),
   customer:customers(name, auth_user_id),
-  appointment_services(service_id, service_name, price_cents, duration_min)`
+  appointment_services(service_id, service_name, price_cents, duration_min, covered)`
 
 export interface LoadedAppointment {
   id: string
@@ -40,7 +40,9 @@ export async function loadAppointment(
     name: s.service_name,
     duration_min: s.duration_min,
     price_cents: s.price_cents,
+    covered: s.covered,
   }))
+  const subscription = a.subscription_id ? await loadSubscription(db, a.subscription_id) : null
 
   return {
     id: a.id,
@@ -60,9 +62,28 @@ export async function loadAppointment(
       customer_name: a.customer?.name ?? '',
       services,
       total_price_cents: services.reduce((acc, s) => acc + s.price_cents, 0),
+      // a pagar na barbearia (o que a assinatura não cobre)
+      amount_due_cents: services.reduce((acc, s) => acc + (s.covered ? 0 : s.price_cents), 0),
+      covered_service_ids: services.filter((s) => s.covered).map((s) => s.id),
+      subscription,
       cancel_min_notice_hours: hours,
       cancel_deadline: cancelDeadline(startsAt, hours).toISOString(),
       can_cancel: checkCustomerCancel(a.status, startsAt, new Date(), hours) === 'ok',
     },
+  }
+}
+
+/** Assinatura que cobre o agendamento: plano e cortes usados no período. */
+async function loadSubscription(db: AdminClient, id: string) {
+  const [{ data: sub }, { data: usage }] = await Promise.all([
+    db.from('customer_subscriptions').select('plan_name, cuts_included, ends_on').eq('id', id).maybeSingle(),
+    db.rpc('subscription_usage', { p_ids: [id] }),
+  ])
+  if (!sub) return null
+  return {
+    plan_name: sub.plan_name,
+    cuts_included: sub.cuts_included,
+    cuts_used: usage?.[0]?.used ?? 0,
+    ends_on: sub.ends_on,
   }
 }

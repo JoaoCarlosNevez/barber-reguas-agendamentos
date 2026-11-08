@@ -31,3 +31,18 @@ export function useAdminServices() {
     },
   })
 }
+
+export function useSubscriptionPlans() {
+  return useQuery({
+    queryKey: ['admin', 'subscription_plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('id, name, price_cents, cuts_per_month, active, subscription_plan_services(service_id)')
+        .order('active', { ascending: false })
+        .order('price_cents')
+      if (error) throw error
+      return data
+    },
+  })
+}

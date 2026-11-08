@@ -76,6 +76,7 @@ async function cleanup() {
     await admin.auth.admin.deleteUser(u.id)
   }
   await admin.from('push_subscriptions').delete().like('endpoint', 'https://push.example.test/%')
+  await admin.from('subscription_plans').delete().like('name', 'Teste plano%')
 }
 
 beforeAll(cleanup)
@@ -755,5 +756,146 @@ describe('dono gerencia clientes (Gestão › Clientes)', () => {
     expect((await owner.rpc('admin_delete_customer', { p_id: c?.id ?? '' })).error).toBeNull()
     const { data: staff } = await admin.auth.admin.getUserById('b0000000-0000-4000-8000-000000000001')
     expect(staff.user).not.toBeNull()
+  })
+})
+
+describe('assinatura (N cortes por mês)', () => {
+  const asUser = async (email: string) => {
+    const c = createClient<Database>(apiUrl, anonKey, { auth: { persistSession: false } })
+    const { error } = await c.auth.signInWithPassword({ email, password: 'Senha@123' })
+    if (error) throw error
+    return c
+  }
+
+  it('cobre até o limite, cancelado devolve, dono ajusta usados e marca pago; conclusão sai como Assinatura', async () => {
+    const owner = await asUser('admin@barbearia.dev')
+    const rafael = await asUser('rafael@barbearia.dev')
+    const phone = `${PHONE_PREFIX}00951`
+    expect((await callFn('customer-login', { name: 'Sara Assinante', phone })).status).toBe(200)
+    const { data: cust } = await admin.from('customers').select('id').eq('phone', phone).single()
+    const customerId = cust?.id ?? ''
+
+    const { data: plan, error: planErr } = await owner
+      .from('subscription_plans')
+      .insert({ name: 'Teste plano 2 cortes', price_cents: 9000, cuts_per_month: 2 })
+      .select('id')
+      .single()
+    expect(planErr).toBeNull()
+    const planId = plan?.id ?? ''
+    expect((await owner.from('subscription_plan_services').insert({ plan_id: planId, service_id: CORTE })).error).toBeNull()
+
+    // barbeiro não ativa
+    const today = dateInTz(new Date(), SP)
+    const denied = await rafael.rpc('admin_add_subscription', {
+      p_customer_id: customerId, p_plan_id: planId, p_starts_on: today, p_price_cents: 9000,
+    })
+    expect(denied.error?.message).toBe('forbidden')
+
+    // ativa pendente (sem forma de pagamento)
+    const added = await owner.rpc('admin_add_subscription', {
+      p_customer_id: customerId, p_plan_id: planId, p_starts_on: today, p_price_cents: 9000,
+    })
+    expect(added.error).toBeNull()
+    const subId = added.data?.id ?? ''
+    expect(added.data?.paid_at).toBeNull()
+
+    // segundo período sobreposto é recusado
+    const overlap = await owner.rpc('admin_add_subscription', {
+      p_customer_id: customerId, p_plan_id: planId, p_starts_on: today, p_price_cents: 9000,
+    })
+    expect(overlap.error?.message).toMatch(/customer_subscriptions_no_overlap/)
+
+    const day = futureDate(13)
+    const book = async () => {
+      const r = await callFn('create-appointment', {
+        barber_id: RAFAEL, service_ids: [CORTE], starts_at: await firstSlot(day), customer: { name: 'Sara', phone },
+      })
+      expect(r.status).toBe(201)
+      return r
+    }
+    const b1 = await book()
+    expect(b1.body.appointment.subscription).toMatchObject({ cuts_included: 2, cuts_used: 1 })
+    expect(b1.body.appointment.amount_due_cents).toBe(0)
+    const b2 = await book()
+    expect(b2.body.appointment.subscription).toMatchObject({ cuts_used: 2 })
+    const b3 = await book()
+    expect(b3.body.appointment.subscription).toBeNull()
+    expect(b3.body.appointment.amount_due_cents).toBeGreaterThan(0)
+
+    // cancelar devolve o uso
+    const cancel = await callFn('cancel-appointment', { token: b1.body.token })
+    expect(cancel.status).toBe(200)
+    const usage = async () => (await owner.rpc('subscription_usage', { p_ids: [subId] })).data?.[0]?.used
+    expect(await usage()).toBe(1)
+
+    // dono corrige os usados
+    expect((await rafael.rpc('admin_set_subscription_used', { p_id: subId, p_used: 0 })).error?.message).toBe('forbidden')
+    expect((await owner.rpc('admin_set_subscription_used', { p_id: subId, p_used: 2 })).error).toBeNull()
+    expect(await usage()).toBe(2)
+    expect((await owner.rpc('admin_set_subscription_used', { p_id: subId, p_used: 0 })).error).toBeNull()
+    expect(await usage()).toBe(0)
+
+    // marca pago: entra com data de pagamento
+    const pay = await owner.rpc('admin_set_subscription_payment', { p_id: subId, p_payment_method: 'pix', p_price_cents: 8500 })
+    expect(pay.error).toBeNull()
+    const { data: paid } = await admin.from('customer_subscriptions').select('paid_at, payment_method, price_cents').eq('id', subId).single()
+    expect(paid).toMatchObject({ payment_method: 'pix', price_cents: 8500 })
+    expect(paid?.paid_at).not.toBeNull()
+
+    // atendimento coberto já iniciado: barbeiro conclui sem informar pagamento
+    const past = new Date(Date.now() - 60 * 60_000)
+    const { data: appt } = await admin
+      .from('appointments')
+      .insert({
+        barber_id: RAFAEL, customer_id: customerId, subscription_id: subId,
+        starts_at: past.toISOString(), ends_at: new Date(past.getTime() + 30 * 60_000).toISOString(),
+        cancel_token_hash: 'e'.repeat(63) + '1',
+      })
+      .select('id')
+      .single()
+    const apptId = appt?.id ?? ''
+    createdAppointments.push(apptId)
+    await admin.from('appointment_services').insert({
+      appointment_id: apptId, service_id: CORTE, service_name: 'Corte', price_cents: 5000, duration_min: 30, covered: true,
+    })
+    const done = await rafael.from('appointments').update({ status: 'completed' }).eq('id', apptId).select('payment_method, paid_cents').single()
+    expect(done.error).toBeNull()
+    expect(done.data).toMatchObject({ payment_method: 'subscription', paid_cents: 0 })
+
+    // remover o mês: horário futuro volta ao preço normal
+    const b2Id = b2.body.appointment.id as string
+    expect((await owner.rpc('admin_delete_subscription', { p_id: subId })).error).toBeNull()
+    const { data: after } = await admin.from('appointments').select('subscription_id, appointment_services(covered)').eq('id', b2Id).single()
+    expect(after?.subscription_id).toBeNull()
+    expect(after?.appointment_services.every((x) => !x.covered)).toBe(true)
+  })
+
+  it('ativar com horário já marcado no período passa a cobrir', async () => {
+    const owner = await asUser('admin@barbearia.dev')
+    const phone = `${PHONE_PREFIX}00952`
+    const r = await callFn('create-appointment', {
+      barber_id: RAFAEL, service_ids: [CORTE], starts_at: await firstSlot(futureDate(14)), customer: { name: 'Tadeu', phone },
+    })
+    expect(r.status).toBe(201)
+    expect(r.body.appointment.subscription).toBeNull()
+    const { data: cust } = await admin.from('customers').select('id').eq('phone', phone).single()
+    const { data: plan } = await owner
+      .from('subscription_plans')
+      .insert({ name: 'Teste plano 4 cortes', price_cents: 15000, cuts_per_month: 4 })
+      .select('id')
+      .single()
+    await owner.from('subscription_plan_services').insert({ plan_id: plan?.id ?? '', service_id: CORTE })
+    const added = await owner.rpc('admin_add_subscription', {
+      p_customer_id: cust?.id ?? '', p_plan_id: plan?.id ?? '', p_starts_on: dateInTz(new Date(), SP),
+      p_price_cents: 15000, p_payment_method: 'cash',
+    })
+    expect(added.error).toBeNull()
+    expect(added.data?.paid_at).not.toBeNull()
+    const { data: appt } = await admin
+      .from('appointments')
+      .select('subscription_id')
+      .eq('id', r.body.appointment.id as string)
+      .single()
+    expect(appt?.subscription_id).toBe(added.data?.id)
   })
 })

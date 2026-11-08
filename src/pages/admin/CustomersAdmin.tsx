@@ -8,6 +8,10 @@ import { maskBrPhone } from '@/lib/phoneMask'
 import { formatBrPhone, normalizeBrPhone } from '@/lib/shared'
 import { supabase } from '@/lib/supabase'
 import { useNow } from '@/hooks/useNow'
+import { APP_TIMEZONE } from '@/lib/env'
+import { dateInTz } from '@/lib/shared'
+import { currentSubscription } from '@/lib/subscription'
+import { CustomerSubscription, PlansAdmin } from './SubscriptionsAdmin'
 
 const PAGE = 50
 
@@ -18,7 +22,7 @@ function useCustomers(search: string) {
     queryFn: async () => {
       let q = supabase
         .from('customers')
-        .select('id, name, phone, is_guest, auth_user_id, created_at, appointments(starts_at, status), loyalty_stamps(redemption_id)')
+        .select('id, name, phone, is_guest, auth_user_id, created_at, appointments(starts_at, status), loyalty_stamps(redemption_id), customer_subscriptions(id, plan_name, cuts_included, starts_on, ends_on, price_cents, payment_method, paid_at)')
         .order('name')
         .limit(PAGE)
       // tira caracteres que quebram o filtro do PostgREST
@@ -47,7 +51,8 @@ export function CustomersAdmin() {
   const [flash, setFlash] = useState<string | null>(null)
 
   return (
-    <section>
+    <section className="space-y-4">
+      <PlansAdmin />
       <SectionTitle>Clientes</SectionTitle>
       <Input
         label="Pesquisar"
@@ -113,6 +118,8 @@ function CustomerCard({
   const last = visits.map((a) => a.starts_at).sort().at(-1)
   const stamps = c.loyalty_stamps.filter((s) => s.redemption_id === null).length
   const hasAccount = !c.is_guest && c.auth_user_id !== null
+  const today = dateInTz(useNow(), APP_TIMEZONE)
+  const sub = currentSubscription(c.customer_subscriptions, today)
 
   return (
     <Card className="p-0">
@@ -127,7 +134,10 @@ function CustomerCard({
           <span className="block text-sm text-muted tabular-nums">{formatBrPhone(c.phone)}</span>
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1 text-xs text-muted">
-          <Badge tone={hasAccount ? 'completed' : 'neutral'}>{hasAccount ? 'Com conta' : 'Visitante'}</Badge>
+          <span className="flex gap-1">
+            {sub ? <Badge tone={sub.paid_at ? 'scheduled' : 'cancelled'}>{sub.paid_at ? 'Assinante' : 'Assinatura pendente'}</Badge> : null}
+            <Badge tone={hasAccount ? 'completed' : 'neutral'}>{hasAccount ? 'Com conta' : 'Visitante'}</Badge>
+          </span>
           <span>
             {visits.length} {visits.length === 1 ? 'corte' : 'cortes'}
             {last ? ` · último ${formatShortDate(last)}` : ''}
@@ -153,6 +163,7 @@ function CustomerCard({
                   <dd>{hasAccount ? stamps : 'só com conta'}</dd>
                 </div>
               </dl>
+              <CustomerSubscription customerId={c.id} subs={c.customer_subscriptions} />
               <History appointments={c.appointments} />
               <div className="flex flex-wrap gap-2">
                 <a

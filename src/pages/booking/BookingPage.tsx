@@ -16,6 +16,7 @@ import { APP_TIMEZONE } from '@/lib/env'
 import { dayChipParts, formatDuration, formatLongDate, formatPrice } from '@/lib/format'
 import { maskBrPhone } from '@/lib/phoneMask'
 import { addDays, dateInTz, formatBrPhone, normalizeBrPhone } from '@/lib/shared'
+import { currentSubscription, useMySubscriptions } from '@/lib/subscription'
 import { supabase } from '@/lib/supabase'
 import type { PublicAppointment } from './AppointmentPage'
 
@@ -435,6 +436,7 @@ function BookingFlow({ catalog }: { catalog: Catalog }) {
                   {selectedServices.map((s) => s.name).join(' + ')} · {formatDuration(totalMin)} ·{' '}
                   {barberName ? `com ${barberName}` : 'com o barbeiro disponível'}
                 </p>
+                <SubscriptionHint slot={slot} serviceIds={selectedServices.map((s) => s.id)} />
               </Card>
 
               <form
@@ -545,5 +547,26 @@ function AnswerButton({
         →
       </span>
     </button>
+  )
+}
+
+/** Cliente logado com assinatura: avisa antes de confirmar que o corte é coberto. */
+function SubscriptionHint({ slot, serviceIds }: { slot: string; serviceIds: string[] }) {
+  const { role } = useAuth()
+  const subs = useMySubscriptions(role === 'customer')
+  const day = dateInTz(new Date(slot), APP_TIMEZONE)
+  const sub = currentSubscription(subs.data ?? [], day)
+  if (!sub || !serviceIds.some((id) => sub.covered_service_ids.includes(id))) return null
+  if (sub.used >= sub.cuts_included) {
+    return (
+      <p className="mt-2 text-sm text-muted">
+        Os {sub.cuts_included} cortes da sua assinatura neste mês já foram usados: este sai com o preço normal.
+      </p>
+    )
+  }
+  return (
+    <p className="mt-2 rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
+      ✓ Coberto pela sua assinatura · vai ser o {sub.used + 1}º de {sub.cuts_included} cortes do mês
+    </p>
   )
 }
